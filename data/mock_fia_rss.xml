@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    MOCK DATA FILE — FOR DEVELOPMENT AND TESTING ONLY
+    
+    This file simulates what the real FIA RSS feed returns.
+    Real feed URL:  https://www.fia.com/rss/press-release
+    Real F1 URL:    https://www.formula1.com/en/latest/all.xml
+
+    Structure notes:
+    - Each <item> is one press release or news article
+    - <title> is what parser.py will scan first (short, usually contains key numbers)
+    - <description> is the full article text (longer, more detail)
+    - <pubDate> follows RFC 822 format — Python reads this with email.utils.parsedate()
+    - <link> is the source URL — stored in overrides.json for traceability
+    - <category> helps us filter — we only care about "F1" and "Formula 1" items
+
+    Test cases covered:
+    1. Standard mid-season recharge reduction (global, all circuits)
+    2. Single-circuit qualifying adjustment
+    3. Ambiguous article with MJ numbers that are NOT limit changes (should NOT be extracted)
+    4. Vague announcement with no specific MJ number (should be skipped gracefully)
+    5. Multi-value announcement (race AND qualifying limits in one article)
+    6. Older article already in overrides.json (parser should detect duplicate by pubDate)
+    7. Non-F1 item (WRC article) — should be ignored entirely
+-->
+
+<rss version="2.0">
+  <channel>
+    <title>FIA Press Releases</title>
+    <link>https://www.fia.com/media-center/press_release</link>
+    <description>Official press releases from the Fédération Internationale de l'Automobile</description>
+    <language>en</language>
+    <lastBuildDate>Tue, 29 Jul 2026 08:00:00 +0000</lastBuildDate>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         TEST CASE 1 — Global recharge reduction, all circuits
+         Expected parser output:
+           applies_to: "all"
+           session: "race"
+           new_limit_mj: 7.0
+           previous_limit_mj: 8.0
+         ═══════════════════════════════════════════════════════════════ -->
+    <item>
+      <title>Refinements to the 2026 FIA Formula 1 Regulations Agreed by All Stakeholders</title>
+      <link>https://www.fia.com/news/refinements-2026-fia-formula-1-regulations-agreed-all-stakeholders</link>
+      <pubDate>Mon, 21 Apr 2026 14:30:00 +0000</pubDate>
+      <category>F1</category>
+      <description>
+        Following a meeting between the FIA, Team Principals, and Power Unit Manufacturers,
+        several refinements to the 2026 Formula 1 regulations have been agreed and will take
+        effect from the Miami Grand Prix.
+
+        ENERGY MANAGEMENT:
+        Adjustments to energy management parameters, including a reduction in maximum permitted
+        recharge from 8MJ to 7MJ per lap, aimed at reducing excessive harvesting and encouraging
+        more consistent flat-out driving. This change targets a maximum superclip duration reduced
+        to approximately two to four seconds per lap.
+
+        Peak superclip power increased to 350kW, previously being 250kW, further reducing the
+        time spent recharging and reducing driver workload on energy management.
+
+        The number of events where alternative lower energy limits may apply has been increased
+        from 8 to 12 races, allowing greater adaptation to circuit characteristics.
+
+        RACE STARTS:
+        Changes to race start procedures will be trialled at Miami before full adoption.
+        Maximum ERS deployment will be reduced at race starts, limiting torque and improving
+        car control in low-grip conditions.
+      </description>
+    </item>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         TEST CASE 2 — Single circuit, qualifying only
+         Expected parser output:
+           applies_to: "suzuka"
+           session: "qualifying"
+           new_limit_mj: 8.0
+           previous_limit_mj: 9.0
+         ═══════════════════════════════════════════════════════════════ -->
+    <item>
+      <title>FIA Announce Energy Management Adjustment for 2026 Japanese Grand Prix Qualifying</title>
+      <link>https://www.fia.com/news/energy-management-adjustment-japanese-grand-prix-qualifying-2026</link>
+      <pubDate>Thu, 26 Mar 2026 09:15:00 +0000</pubDate>
+      <category>F1</category>
+      <description>
+        Formula 1's governing body have announced a modification to the energy management
+        parameters for Qualifying at this weekend's Japanese Grand Prix at Suzuka.
+
+        Following discussions between the FIA, all 11 Formula 1 teams and the Power Unit
+        manufacturers, it has been unanimously agreed to reduce the maximum permitted energy
+        recharge for Qualifying at Suzuka from 9.0MJ to 8.0MJ.
+
+        The FIA stated: "To ensure that the intended balance between energy deployment and
+        driver performance is maintained, this targeted adjustment is part of the normal
+        process of optimisation as the new regulatory framework is further validated in
+        real-world conditions."
+
+        No changes have been made to race energy limits for the Japanese Grand Prix.
+        The standard 8MJ race limit remains in place for the race itself.
+      </description>
+    </item>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         TEST CASE 3 — MJ numbers present but NOT a limit change
+         This article discusses car performance data, not a rule change.
+         Expected parser output: SKIP (no limit change detected)
+         This is a critical test — a naive parser would wrongly extract
+         "8.5 MJ" as a new limit. A good parser checks context.
+         ═══════════════════════════════════════════════════════════════ -->
+    <item>
+      <title>Technical Analysis: How Teams Are Managing Energy Deployment in 2026</title>
+      <link>https://www.formula1.com/en/latest/article/technical-analysis-energy-deployment-2026</link>
+      <pubDate>Wed, 15 Apr 2026 11:00:00 +0000</pubDate>
+      <category>Formula 1</category>
+      <description>
+        With the 2026 season now three rounds old, teams have gathered significant data on how
+        to optimise their energy deployment strategies under the new regulations.
+
+        Mercedes data shows their car is recovering an average of 8.5MJ per lap at Monaco-style
+        circuits, while at power circuits like Monza, recovery drops to just 4.2MJ.
+
+        Red Bull Ford has reportedly found a way to reduce their superclip phase to just 1.8
+        seconds per lap, recovering the full 4MJ battery capacity in fewer braking zones than
+        their rivals. Ferrari meanwhile are averaging 6.7MJ recovery per lap across the first
+        three events.
+
+        The data paints a picture of a grid still coming to terms with the demands of the
+        new power unit architecture.
+      </description>
+    </item>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         TEST CASE 4 — Vague announcement, no specific MJ number
+         Expected parser output: SKIP (no extractable value)
+         The parser should log "found energy article but no MJ value" 
+         rather than crashing or guessing.
+         ═══════════════════════════════════════════════════════════════ -->
+    <item>
+      <title>FIA Statement: Further Energy Management Discussions Ongoing</title>
+      <link>https://www.fia.com/news/fia-statement-energy-management-discussions-ongoing</link>
+      <pubDate>Fri, 10 Apr 2026 16:45:00 +0000</pubDate>
+      <category>F1</category>
+      <description>
+        The FIA, together with Formula 1 teams and Power Unit Manufacturers, continues to
+        evaluate energy management parameters ahead of the Miami Grand Prix.
+
+        Further refinements to the recharge limits are under consideration and will be
+        announced before the next event. The governing body has stressed that any changes
+        will be agreed unanimously before implementation.
+
+        Teams have been asked to submit technical feedback by end of the following week.
+      </description>
+    </item>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         TEST CASE 5 — Both race AND qualifying limits in one article
+         Expected parser output: TWO separate override entries:
+           Entry A: session "race",       new_limit_mj: 7.0
+           Entry B: session "qualifying", new_limit_mj: 6.5
+         Tests whether parser handles multi-value articles correctly.
+         ═══════════════════════════════════════════════════════════════ -->
+    <item>
+      <title>2026 Belgian Grand Prix: FIA Confirms Energy Limits for Spa-Francorchamps</title>
+      <link>https://www.fia.com/news/belgian-grand-prix-2026-energy-limits-confirmed</link>
+      <pubDate>Wed, 22 Jul 2026 10:00:00 +0000</pubDate>
+      <category>F1</category>
+      <description>
+        Ahead of this weekend's Belgian Grand Prix at Spa-Francorchamps, the FIA has confirmed
+        the energy recharge limits that will apply throughout the race weekend.
+
+        For the race, the maximum permitted recharge remains at 7MJ per lap, in line with
+        the standard limit introduced from Miami.
+
+        For qualifying, the FIA has determined that a lower limit of 6.5MJ will apply at Spa,
+        reflecting the circuit's long straights and limited braking zones. This represents a
+        reduction from the standard 7MJ qualifying limit.
+
+        Teams were informed of this decision on Tuesday following a technical review of
+        circuit characteristics and power unit telemetry from previous Spa events.
+      </description>
+    </item>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         TEST CASE 6 — Duplicate article (already processed)
+         pubDate matches an entry already in overrides.json.
+         Expected parser output: SKIP (log "already processed")
+         Tests the deduplication logic in fetcher.py.
+         ═══════════════════════════════════════════════════════════════ -->
+    <item>
+      <title>Refinements to the 2026 FIA Formula 1 Regulations Agreed by All Stakeholders</title>
+      <link>https://www.fia.com/news/refinements-2026-fia-formula-1-regulations-agreed-all-stakeholders</link>
+      <pubDate>Mon, 21 Apr 2026 14:30:00 +0000</pubDate>
+      <category>F1</category>
+      <description>
+        This is an identical republication of the April 21 announcement. The parser should
+        detect the duplicate pubDate and skip processing entirely, rather than creating
+        a second override entry for the same event.
+      </description>
+    </item>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         TEST CASE 7 — Non-F1 category (WRC article)
+         Expected parser output: SKIP immediately (wrong category)
+         Tests category filtering before any text parsing begins.
+         ═══════════════════════════════════════════════════════════════ -->
+    <item>
+      <title>WRC Rally Estonia: Energy Recovery Limits Confirmed for Hybrid Cars</title>
+      <link>https://www.fia.com/news/wrc-rally-estonia-energy-recovery-2026</link>
+      <pubDate>Mon, 20 Jul 2026 08:30:00 +0000</pubDate>
+      <category>WRC</category>
+      <description>
+        Ahead of Rally Estonia, the FIA has confirmed that WRC hybrid cars will operate under
+        a maximum energy recovery limit of 3.5MJ per stage. This applies to all Hybrid Rally1
+        cars competing in the event. The limit was set following analysis of stage profiles
+        and safety considerations for spectator zones.
+      </description>
+    </item>
+
+  </channel>
+</rss>

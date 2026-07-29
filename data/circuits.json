@@ -1,0 +1,377 @@
+{
+  "_comment": "Single source of truth for all circuit data. Both parser.py and app.py read from here. To add a new circuit: add an entry to 'circuits', add its name variants to 'aliases'.",
+  "_last_updated": "2026-07-29",
+  "_season": 2026,
+
+  "circuits": {
+    "australia": {
+      "name": "Australian Grand Prix",
+      "circuit": "Albert Park",
+      "city": "Melbourne",
+      "country": "Australia",
+      "round": 1,
+      "lap_time_sec": 87,
+      "race_laps": 58,
+      "energy_type": "balanced",
+      "svg_file" : "melbourne-2.svg"
+    },
+    "china": {
+      "name": "Chinese Grand Prix",
+      "circuit": "Shanghai International Circuit",
+      "city": "Shanghai",
+      "country": "China",
+      "round": 2,
+      "lap_time_sec": 96,
+      "race_laps": 56,
+      "energy_type": "balanced",
+      "svg_file" : "shanghai-1.svg"
+    },
+    "japan": {
+      "name": "Japanese Grand Prix",
+      "circuit": "Suzuka Circuit",
+      "city": "Suzuka",
+      "country": "Japan",
+      "round": 3,
+      "lap_time_sec": 91,
+      "race_laps": 53,
+      "energy_type": "balanced",
+      "svg_file" : "suzuka-2.svg"
+    },
+    "bahrain": {
+      "name": "Bahrain Grand Prix",
+      "circuit": "Bahrain International Circuit",
+      "city": "Sakhir",
+      "country": "Bahrain",
+      "round": 4,
+      "lap_time_sec": 93,
+      "race_laps": 57,
+      "energy_type": "balanced",
+      "svg_file" : "bahrain-1.svg"
+    },
+    "saudi_arabia": {
+      "name": "Saudi Arabian Grand Prix",
+      "circuit": "Jeddah Corniche Circuit",
+      "city": "Jeddah",
+      "country": "Saudi Arabia",
+      "round": 5,
+      "lap_time_sec": 89,
+      "race_laps": 50,
+      "energy_type": "poor",
+      "svg_file" : "jeddah-1.svg"
+    },
+    "miami": {
+      "name": "Miami Grand Prix",
+      "circuit": "Miami International Autodrome",
+      "city": "Miami Gardens",
+      "country": "United States",
+      "round": 6,
+      "lap_time_sec": 91,
+      "race_laps": 57,
+      "energy_type": "balanced",
+      "svg_file" : "miami-1.svg"
+    },
+    "canada": {
+      "name": "Canadian Grand Prix",
+      "circuit": "Circuit Gilles Villeneuve",
+      "city": "Montreal",
+      "country": "Canada",
+      "round": 7,
+      "lap_time_sec": 76,
+      "race_laps": 70,
+      "energy_type": "balanced",
+      "svg_file" : "montreal-6.svg"
+    },
+    "monaco": {
+      "name": "Monaco Grand Prix",
+      "circuit": "Circuit de Monaco",
+      "city": "Monte Carlo",
+      "country": "Monaco",
+      "round": 8,
+      "lap_time_sec": 74,
+      "race_laps": 78,
+      "energy_type": "rich",
+      "svg_file" : "monaco-6.svg"
+    },
+    "spain": {
+      "name": "Barcelona-Catalunya Grand Prix",
+      "circuit": "Circuit de Barcelona-Catalunya",
+      "city": "Barcelona",
+      "country": "Spain",
+      "round": 9,
+      "lap_time_sec": 83,
+      "race_laps": 66,
+      "energy_type": "balanced",
+      "svg_file" : "catalunya-6.svg"
+    },
+    "austria": {
+      "name": "Austrian Grand Prix",
+      "circuit": "Red Bull Ring",
+      "city": "Spielberg",
+      "country": "Austria",
+      "round": 10,
+      "lap_time_sec": 67,
+      "race_laps": 71,
+      "energy_type": "balanced",
+      "svg_file" : "spielberg-3.svg"
+    },
+    "great_britain": {
+      "name": "British Grand Prix",
+      "circuit": "Silverstone Circuit",
+      "city": "Silverstone",
+      "country": "Great Britain",
+      "round": 11,
+      "lap_time_sec": 87,
+      "race_laps": 52,
+      "energy_type": "balanced",
+      "svg_file" : "silverstone-8.svg"
+    },
+    "belgium": {
+      "name": "Belgian Grand Prix",
+      "circuit": "Circuit de Spa-Francorchamps",
+      "city": "Spa",
+      "country": "Belgium",
+      "round": 12,
+      "lap_time_sec": 104,
+      "race_laps": 44,
+      "energy_type": "balanced",
+      "svg_file" : "spa-francorchamps-4.svg"
+    },
+    "hungary": {
+      "name": "Hungarian Grand Prix",
+      "circuit": "Hungaroring",
+      "city": "Budapest",
+      "country": "Hungary",
+      "round": 13,
+      "lap_time_sec": 78,
+      "race_laps": 70,
+      "energy_type": "rich",
+      "svg_file" : "hungaroring-3.svg"
+    },
+    "netherlands": {
+      "name": "Dutch Grand Prix",
+      "circuit": "Circuit Zandvoort",
+      "city": "Zandvoort",
+      "country": "Netherlands",
+      "round": 14,
+      "lap_time_sec": 73,
+      "race_laps": 72,
+      "energy_type": "balanced",
+      "svg_file" : "zandvoort-5.svg"
+    },
+    "italy": {
+      "name": "Italian Grand Prix",
+      "circuit": "Autodromo Nazionale Monza",
+      "city": "Monza",
+      "country": "Italy",
+      "round": 15,
+      "lap_time_sec": 80,
+      "race_laps": 53,
+      "energy_type": "poor",
+      "svg_file" : "monza-7.svg"
+    },
+    "madrid": {
+      "name": "Spanish Grand Prix",
+      "circuit": "Circuito de Madrid Jarama-RACE",
+      "city": "Madrid",
+      "country": "Spain",
+      "round": 16,
+      "lap_time_sec": 85,
+      "race_laps": 60,
+      "energy_type": "balanced",
+      "svg_file" : "madring-1.svg"
+    },
+    "azerbaijan": {
+      "name": "Azerbaijan Grand Prix",
+      "circuit": "Baku City Circuit",
+      "city": "Baku",
+      "country": "Azerbaijan",
+      "round": 17,
+      "lap_time_sec": 102,
+      "race_laps": 51,
+      "energy_type": "poor",
+      "svg_file" : "baku-1.svg"
+    },
+    "singapore": {
+      "name": "Singapore Grand Prix",
+      "circuit": "Marina Bay Street Circuit",
+      "city": "Singapore",
+      "country": "Singapore",
+      "round": 18,
+      "lap_time_sec": 100,
+      "race_laps": 62,
+      "energy_type": "rich",
+      "svg_file" : "marina-bay-4.svg"
+    },
+    "usa": {
+      "name": "United States Grand Prix",
+      "circuit": "Circuit of the Americas",
+      "city": "Austin",
+      "country": "United States",
+      "round": 19,
+      "lap_time_sec": 96,
+      "race_laps": 56,
+      "energy_type": "balanced",
+      "svg_file" : "austin-1.svg"
+    },
+    "mexico": {
+      "name": "Mexico City Grand Prix",
+      "circuit": "Autodromo Hermanos Rodriguez",
+      "city": "Mexico City",
+      "country": "Mexico",
+      "round": 20,
+      "lap_time_sec": 79,
+      "race_laps": 71,
+      "energy_type": "balanced",
+      "svg_file" : "mexico-city-3.svg"
+    },
+    "brazil": {
+      "name": "Brazilian Grand Prix",
+      "circuit": "Autodromo Jose Carlos Pace",
+      "city": "Sao Paulo",
+      "country": "Brazil",
+      "round": 21,
+      "lap_time_sec": 72,
+      "race_laps": 71,
+      "energy_type": "rich",
+      "svg_file" : "interlagos-2.svg"
+    },
+    "las_vegas": {
+      "name": "Las Vegas Grand Prix",
+      "circuit": "Las Vegas Strip Circuit",
+      "city": "Las Vegas",
+      "country": "United States",
+      "round": 22,
+      "lap_time_sec": 90,
+      "race_laps": 50,
+      "energy_type": "poor",
+      "svg_file" : "las-vegas-1.svg"
+    },
+    "qatar": {
+      "name": "Qatar Grand Prix",
+      "circuit": "Lusail International Circuit",
+      "city": "Lusail",
+      "country": "Qatar",
+      "round": 23,
+      "lap_time_sec": 84,
+      "race_laps": 57,
+      "energy_type": "balanced",
+      "svg_file" : "lusail-1.svg"
+    },
+    "abu_dhabi": {
+      "name": "Abu Dhabi Grand Prix",
+      "circuit": "Yas Marina Circuit",
+      "city": "Abu Dhabi",
+      "country": "United Arab Emirates",
+      "round": 24,
+      "lap_time_sec": 87,
+      "race_laps": 58,
+      "energy_type": "balanced",
+      "svg_file" : "yas-marina-2.svg"
+    }
+  },
+
+  "aliases": {
+    "albert park":              "australia",
+    "melbourne":                "australia",
+    "australian":               "australia",
+
+    "shanghai":                 "china",
+    "chinese":                  "china",
+    "shanghai international":   "china",
+
+    "suzuka":                   "japan",
+    "japanese":                 "japan",
+
+    "sakhir":                   "bahrain",
+    "bahrain international":    "bahrain",
+    "bahraini":                 "bahrain",
+
+    "jeddah":                   "saudi_arabia",
+    "saudi":                    "saudi_arabia",
+    "saudi arabian":            "saudi_arabia",
+    "jeddah corniche":          "saudi_arabia",
+
+    "miami":                    "miami",
+    "miami international":      "miami",
+    "miami gardens":            "miami",
+
+    "montreal":                 "canada",
+    "canadian":                 "canada",
+    "circuit gilles villeneuve":"canada",
+    "gilles villeneuve":        "canada",
+
+    "monaco":                   "monaco",
+    "monte carlo":              "monaco",
+    "circuit de monaco":        "monaco",
+
+    "barcelona":                "spain",
+    "spanish":                  "spain",
+    "catalunya":                "spain",
+    "barcelona-catalunya":      "spain",
+    "barcelona-catalunya grand prix": "spain",
+
+    "spielberg":                "austria",
+    "austrian":                 "austria",
+    "red bull ring":            "austria",
+
+    "silverstone":              "great_britain",
+    "british":                  "great_britain",
+    "silverstone circuit":      "great_britain",
+
+    "spa":                      "belgium",
+    "belgian":                  "belgium",
+    "spa-francorchamps":        "belgium",
+    "circuit de spa":           "belgium",
+
+    "hungaroring":              "hungary",
+    "hungarian":                "hungary",
+    "budapest":                 "hungary",
+
+    "zandvoort":                "netherlands",
+    "dutch":                    "netherlands",
+    "circuit zandvoort":        "netherlands",
+
+    "monza":                    "italy",
+    "italian":                  "italy",
+    "autodromo nazionale":      "italy",
+    "autodromo di monza":       "italy",
+
+    "madrid":                   "madrid",
+    "jarama":                   "madrid",
+    "circuito de madrid":       "madrid",
+
+    "baku":                     "azerbaijan",
+    "azerbaijani":              "azerbaijan",
+    "baku city":                "azerbaijan",
+
+    "singapore":                "singapore",
+    "marina bay":               "singapore",
+    "marina bay street":        "singapore",
+
+    "austin":                   "usa",
+    "united states":            "usa",
+    "cota":                     "usa",
+    "circuit of the americas":  "usa",
+
+    "mexico city":              "mexico",
+    "mexican":                  "mexico",
+    "hermanos rodriguez":       "mexico",
+    "autodromo hermanos":       "mexico",
+
+    "sao paulo":                "brazil",
+    "brazilian":                "brazil",
+    "interlagos":               "brazil",
+    "jose carlos pace":         "brazil",
+
+    "las vegas":                "las_vegas",
+    "las vegas strip":          "las_vegas",
+
+    "lusail":                   "qatar",
+    "qatari":                   "qatar",
+    "lusail international":     "qatar",
+
+    "abu dhabi":                "abu_dhabi",
+    "yas marina":               "abu_dhabi",
+    "yas island":               "abu_dhabi"
+  }
+}

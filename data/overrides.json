@@ -1,0 +1,158 @@
+{
+  "events": [
+    {
+      "event": "australia",
+      "source_url": "https://www.fia.com/system/files/decision-document/2026_australian_grand_prix_-_power_unit_information.pdf",
+      "extracted_at": "2026-07-29T22:38:30.469072",
+      "limits": {
+        "race": {
+          "overtake_inactive": 8.0,
+          "overtake_active": 8.5
+        },
+        "qualifying": 7.0,
+        "free_practice": 8.5,
+        "out_laps": 8.5
+      }
+    },
+    {
+      "event": "austria",
+      "source_url": "https://www.fia.com/system/files/decision-document/2026_austrian_grand_prix_-_power_unit_information.pdf",
+      "extracted_at": "2026-07-29T21:35:15.773763",
+      "limits": {
+        "race": {
+          "overtake_inactive": 8.0,
+          "overtake_active": 8.5
+        },
+        "qualifying": 6.0,
+        "free_practice": 8.5,
+        "out_laps": 8.5
+      }
+    },
+    {
+      "event": "belgium",
+      "source_url": "https://www.fia.com/system/files/decision-document/2026_belgian_grand_prix_-_power_unit_information.pdf",
+      "extracted_at": "2026-07-29T21:34:19.263680",
+      "limits": {
+        "race": {
+          "overtake_inactive": 8.5,
+          "overtake_active": 9.0
+        },
+        "qualifying": 7.0,
+        "free_practice": 9.0,
+        "out_laps": 9.0
+      }
+    },
+    {
+      "event": "canada",
+      "source_url": "https://www.fia.com/system/files/decision-document/2026_canadian_grand_prix_-_power_unit_information.pdf",
+      "extracted_at": "2026-07-29T21:18:04.686424",
+      "limits": {
+        "race": {
+          "overtake_inactive": 8.0,
+          "overtake_active": 8.5
+        },
+        "qualifying": 6.0,
+        "free_practice": 8.5,
+        "out_laps": 8.5
+      }
+    },
+    {
+      "event": "china",
+      "source_url": "https://www.fia.com/system/files/decision-document/2026_chinese_grand_prix_-_power_unit_information.pdf",
+      "extracted_at": "2026-07-29T21:35:25.897933",
+      "limits": {
+        "race": {
+          "overtake_inactive": 8.5,
+          "overtake_active": 9.0
+        },
+        "qualifying": 9.0,
+        "free_practice": 9.0,
+        "out_laps": 9.0
+      }
+    },
+    {
+      "event": "great_britain",
+      "source_url": "https://www.fia.com/system/files/decision-document/2026_british_grand_prix_-_power_unit_information.pdf",
+      "extracted_at": "2026-07-29T21:34:41.668995",
+      "limits": {
+        "race": {
+          "overtake_inactive": 8.0,
+          "overtake_active": 8.5
+        },
+        "qualifying": 6.5,
+        "free_practice": 8.5,
+        "out_laps": 8.5
+      }
+    },
+    {
+      "event": "hungary",
+      "source_url": "https://www.fia.com/system/files/decision-document/2026_hungarian_grand_prix_-_power_unit_information.pdf",
+      "extracted_at": "2026-07-29T21:33:34.982253",
+      "limits": {
+        "race": {
+          "overtake_inactive": 8.5,
+          "overtake_active": 9.0
+        },
+        "qualifying": 9.0,
+        "free_practice": 9.0,
+        "out_laps": 9.0
+      }
+    },
+    {
+      "event": "japan",
+      "source_url": "https://www.fia.com/system/files/decision-document/2026_japanese_grand_prix_-_power_unit_information.pdf",
+      "extracted_at": "2026-07-29T21:35:20.967237",
+      "limits": {
+        "race": {
+          "overtake_inactive": 8.5,
+          "overtake_active": 9.0
+        },
+        "qualifying": 8.0,
+        "free_practice": 9.0,
+        "out_laps": 9.0
+      }
+    },
+    {
+      "event": "miami",
+      "source_url": "https://www.fia.com/system/files/decision-document/2026_miami_grand_prix_-_power_unit_information.pdf",
+      "extracted_at": "2026-07-29T21:34:57.684632",
+      "limits": {
+        "race": {
+          "overtake_inactive": 8.5,
+          "overtake_active": 9.0
+        },
+        "qualifying": 8.0,
+        "free_practice": 9.0,
+        "out_laps": 9.0
+      }
+    },
+    {
+      "event": "monaco",
+      "source_url": "https://www.fia.com/system/files/decision-document/2026_monaco_grand_prix_-_power_unit_information.pdf",
+      "extracted_at": "2026-07-29T21:18:04.635891",
+      "limits": {
+        "race": {
+          "overtake_inactive": 8.5,
+          "overtake_active": 9.0
+        },
+        "qualifying": 9.0,
+        "free_practice": 9.0,
+        "out_laps": 9.0
+      }
+    },
+    {
+      "event": "spain",
+      "source_url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_power_unit_information.pdf",
+      "extracted_at": "2026-07-29T22:51:52.722378",
+      "limits": {
+        "race": {
+          "overtake_inactive": 8.5,
+          "overtake_active": 9.0
+        },
+        "qualifying": 7.0,
+        "free_practice": 9.0,
+        "out_laps": 9.0
+      }
+    }
+  ]
+}
