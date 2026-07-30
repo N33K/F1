@@ -617,3 +617,324 @@ html, body {
   .coverage-dot { animation: none; }
   .skeleton     { animation: none; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   RESPONSIVE — MOBILE
+   All rules below only apply at ≤768px.
+   Desktop styles above are untouched.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Elements shown/hidden per breakpoint */
+.mobile-only  { display: none !important; }
+.desktop-only { display: flex; }  /* visible by default */
+
+/* ── Burger button ──────────────────────────────────────────────────── */
+.burger-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.burger-btn span {
+  display: block;
+  width: 18px;
+  height: 1.5px;
+  background: var(--muted);
+  border-radius: 2px;
+  transition: transform 0.25s, opacity 0.25s;
+}
+
+.burger-btn.open span:nth-child(1) { transform: translateY(6.5px) rotate(45deg); }
+.burger-btn.open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+.burger-btn.open span:nth-child(3) { transform: translateY(-6.5px) rotate(-45deg); }
+
+/* ── Mobile overlay ─────────────────────────────────────────────────── */
+.mob-overlay {
+  display: none;
+  position: fixed;
+  top: var(--header-h);
+  left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 199;
+}
+
+/* ── Mobile refresh button ──────────────────────────────────────────── */
+.mob-refresh-btn {
+  background: none;
+  border: 1px solid var(--border2);
+  border-radius: 5px;
+  padding: 5px 10px;
+  color: var(--muted);
+  font-family: 'Titillium Web', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  cursor: pointer;
+}
+
+/* ── Mobile bottom player ───────────────────────────────────────────── */
+/* Hidden on desktop — shown only inside the media query below */
+.mobile-player {
+  display: none;
+}
+
+@media (max-width: 768px) {
+
+  /* Show / hide toggles */
+  .mobile-only  { display: flex !important; }
+  .desktop-only { display: none !important; }
+
+  /* Prevent double scrollbar */
+  html, body { overflow: hidden; }
+
+  /* ── Header ── */
+  .header { padding: 0 12px; gap: 8px; }
+  .header-title { font-size: 16px; }
+  .header-tag { display: none; }
+
+  /* ── Sidebar becomes a slide-in drawer ── */
+  .sidebar {
+    position: fixed;
+    top: var(--header-h);
+    left: 0;
+    bottom: 0;
+    width: 260px;
+    transform: translateX(-100%);
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 200;
+    border-right: 1px solid var(--border2);
+  }
+
+  .sidebar.open { transform: translateX(0); }
+
+  .mob-overlay.open { display: block; }
+
+  /* ── Main panel full width, pad bottom for player ── */
+  .main-panel {
+    width: 100%;
+    padding: 14px 12px 165px;
+    overflow-y: auto;
+  }
+
+  /* ── SVG panel ── */
+  .svg-wrap { max-width: 100%; }
+
+  /* Hide desktop animation controls — mobile player handles this ── */
+  .anim-controls   { display: none; }
+  .energy-bar-wrap { display: none; }
+
+  /* ── Metric cards: force 2 columns ── */
+  .metrics-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  /* ── Session table: hide less important columns on small screens ── */
+  .session-table th:nth-child(4),
+  .session-table td:nth-child(4),
+  .session-table th:nth-child(5),
+  .session-table td:nth-child(5) {
+    display: none;
+  }
+
+  /* ── Detail header ── */
+  .detail-name { font-size: 20px; }
+
+  /* ── Mobile bottom player ── */
+  .mobile-player {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: var(--bg2);
+    border-top: 1px solid var(--border2);
+    padding: 10px 14px 18px;
+    z-index: 100;
+    gap: 0;
+  }
+
+  /* Track name + timer */
+  .mp-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+
+  .mp-name {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: 0.3px;
+  }
+
+  .mp-sub {
+    font-size: 9px;
+    color: var(--muted);
+    margin-top: 1px;
+    letter-spacing: 0.5px;
+  }
+
+  .mp-timer {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: 1px;
+    white-space: nowrap;
+  }
+
+  .mp-total {
+    color: var(--muted);
+    font-weight: 400;
+  }
+
+  /* Progress bar */
+  .mp-bar {
+    height: 3px;
+    background: var(--dim);
+    border-radius: 2px;
+    margin-bottom: 8px;
+    overflow: hidden;
+  }
+
+  .mp-prog {
+    height: 100%;
+    width: 0%;
+    background: var(--teal);
+    border-radius: 2px;
+    transition: width 0.1s linear, background 0.3s;
+  }
+
+  /* Row 1 — play + reset, full width, equal height */
+  .mp-row1 {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .mp-play-btn {
+    flex: 1;
+    height: 34px;
+    background: var(--red);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-family: 'Titillium Web', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .mp-reset-btn {
+    flex: 1;
+    height: 34px;
+    background: none;
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    color: var(--muted);
+    font-family: 'Titillium Web', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Row 2 — speed buttons + battery bar */
+  .mp-row2 {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .mp-spd {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .mp-spd-lbl {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  .mp-spd-btns {
+    display: flex;
+    gap: 3px;
+  }
+
+  .mp-sb {
+    background: none;
+    border: 1px solid var(--border2);
+    color: var(--muted);
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-family: 'Titillium Web', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .mp-sb.active {
+    border-color: var(--teal);
+    color: var(--teal);
+  }
+
+  /* Battery bar */
+  .mp-bat {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .mp-bat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .mp-bat-lbl {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  .mp-bat-pct {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--teal);
+  }
+
+  .mp-bat-track {
+    height: 5px;
+    background: var(--dim);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .mp-bat-fill {
+    height: 100%;
+    width: 100%;
+    background: var(--teal);
+    border-radius: 3px;
+    transition: width 0.1s linear, background 0.3s;
+  }
+
+}
