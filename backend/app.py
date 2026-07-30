@@ -241,18 +241,6 @@ def serve_svg(filename: str):
     )
     return send_from_directory(svg_dir, filename)
 
-@app.route("/debug/paths")
-def debug_paths():
-    svg_dir = os.path.join(
-        BASE_DIR,
-        "../f1-circuits-svg/circuits/detailed/black-outline"
-    )
-    return {
-        "base_dir": BASE_DIR,
-        "svg_dir": svg_dir,
-        "svg_dir_exists": os.path.exists(svg_dir),
-        "project_root_contents": os.listdir(os.path.join(BASE_DIR, "..")),
-    }
 
 @app.route("/<path:filename>")
 def serve_frontend(filename: str):
