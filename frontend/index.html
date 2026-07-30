@@ -6,32 +6,47 @@
   <title>F1 Energy Decoder</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@300;400;600;700;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
   <!-- ── Header ─────────────────────────────────────────────────────── -->
   <header class="header">
     <div class="header-left">
+
+      <!-- Burger — mobile only -->
+      <button class="burger-btn mobile-only" id="burger-btn"
+              onclick="toggleMobileMenu()" aria-label="Open circuit menu">
+        <span></span><span></span><span></span>
+      </button>
+
       <span class="header-tag">FIA · 2026 SEASON</span>
-      <h1 class="header-title">F1 ENERGY <span class="accent">DECODED</span></h1>
+      <h1 class="header-title">F1 <span class="accent">ENERGY</span> DECODED</h1>
     </div>
     <div class="header-right">
-      <div class="coverage-pill" id="coverage-pill">
+
+      <!-- Refresh — mobile only -->
+      <button class="mob-refresh-btn mobile-only" id="mob-refresh-btn"
+              onclick="fetchCircuitData()">↻ Refresh</button>
+
+      <!-- Coverage pill — desktop only -->
+      <div class="coverage-pill desktop-only" id="coverage-pill">
         <span class="coverage-dot"></span>
         <span id="coverage-text">Loading...</span>
       </div>
+
     </div>
   </header>
+
+  <!-- Mobile sidebar overlay -->
+  <div class="mob-overlay" id="mob-overlay" onclick="toggleMobileMenu()"></div>
 
   <!-- ── Main layout ────────────────────────────────────────────────── -->
   <div class="layout">
 
-    <!-- Sidebar: circuit list -->
-    <aside class="sidebar">
+    <aside class="sidebar" id="sidebar">
       <div class="sidebar-label">2026 CALENDAR</div>
       <ul class="circuit-list" id="circuit-list">
-        <!-- Populated by app.js -->
         <li class="circuit-item skeleton"></li>
         <li class="circuit-item skeleton"></li>
         <li class="circuit-item skeleton"></li>
@@ -40,38 +55,34 @@
       </ul>
     </aside>
 
-    <!-- Main panel -->
     <main class="main-panel">
 
-      <!-- Empty state — shown before a circuit is selected -->
       <div class="empty-state" id="empty-state">
         <div class="empty-icon">⚡</div>
         <p class="empty-title">Select a circuit</p>
-        <p class="empty-sub">Choose a Grand Prix from the calendar to see its energy profile and animated lap simulation.</p>
+        <p class="empty-sub">Choose a Grand Prix from the calendar to see its
+          energy profile and animated lap simulation.</p>
       </div>
 
-      <!-- Circuit detail — hidden until a circuit is selected -->
       <div class="circuit-detail" id="circuit-detail" style="display:none">
 
-        <!-- Top bar -->
         <div class="detail-header">
           <div>
             <div class="detail-round" id="detail-round">ROUND 00</div>
             <h2 class="detail-name" id="detail-name">Circuit Name</h2>
             <div class="detail-location" id="detail-location">City, Country</div>
           </div>
-          <button class="fetch-btn" id="fetch-btn" onclick="fetchCircuitData()">
+          <button class="fetch-btn desktop-only" id="fetch-btn"
+                  onclick="fetchCircuitData()">
             <span id="fetch-btn-label">↻ Refresh data</span>
           </button>
         </div>
 
-        <!-- SVG animation panel -->
         <div class="svg-panel">
           <div class="svg-wrap" id="svg-wrap">
             <div class="svg-loading" id="svg-loading">Loading circuit...</div>
           </div>
 
-          <!-- Energy bar beneath the circuit -->
           <div class="energy-bar-wrap">
             <div class="energy-bar-label">BATTERY STATE</div>
             <div class="energy-bar-track">
@@ -80,9 +91,9 @@
             <div class="energy-bar-pct" id="energy-bar-pct">100%</div>
           </div>
 
-          <!-- Animation controls -->
           <div class="anim-controls">
-            <button class="anim-btn" id="play-btn" onclick="toggleAnimation()">▶ Play lap</button>
+            <button class="anim-btn" id="play-btn"
+                    onclick="toggleAnimation()">▶ Play lap</button>
             <div class="anim-speed">
               <span class="anim-speed-label">SPEED</span>
               <button class="speed-btn active" onclick="setSpeed(1, this)">1×</button>
@@ -96,18 +107,13 @@
           </div>
         </div>
 
-        <!-- No data state -->
         <div class="no-data-banner" id="no-data-banner" style="display:none">
           <span>⚠ No official data fetched for this circuit yet.</span>
           <button onclick="fetchCircuitData()">Fetch from FIA now</button>
         </div>
 
-        <!-- MJ metric cards -->
-        <div class="metrics-row" id="metrics-row">
-          <!-- Populated by app.js -->
-        </div>
+        <div class="metrics-row" id="metrics-row"></div>
 
-        <!-- Session comparison table -->
         <div class="session-table-wrap" id="session-table-wrap" style="display:none">
           <div class="section-label">SESSION COMPARISON</div>
           <table class="session-table">
@@ -120,13 +126,57 @@
                 <th>Battery fills</th>
               </tr>
             </thead>
-            <tbody id="session-table-body">
-            </tbody>
+            <tbody id="session-table-body"></tbody>
           </table>
         </div>
 
       </div>
     </main>
+  </div>
+
+  <!-- ── Mobile bottom player ───────────────────────────────────────── -->
+  <div class="mobile-player" id="mobile-player">
+
+    <div class="mp-top">
+      <div class="mp-track">
+        <div class="mp-name" id="mp-name">Select a circuit</div>
+        <div class="mp-sub" id="mp-sub">—</div>
+      </div>
+      <div class="mp-timer">
+        <span id="mp-lap-time">0.0s</span>
+        <span class="mp-total" id="mp-total">/ —</span>
+      </div>
+    </div>
+
+    <div class="mp-bar">
+      <div class="mp-prog" id="mp-prog"></div>
+    </div>
+
+    <div class="mp-row1">
+      <button class="mp-play-btn" id="mp-play-btn"
+              onclick="toggleAnimation()">▶ Play lap</button>
+      <button class="mp-reset-btn" onclick="resetAnimationUI()">↺ Reset</button>
+    </div>
+
+    <div class="mp-row2">
+      <div class="mp-spd">
+        <span class="mp-spd-lbl">Speed</span>
+        <div class="mp-spd-btns">
+          <button class="mp-sb active" onclick="setSpeed(1, this)">1×</button>
+          <button class="mp-sb" onclick="setSpeed(2, this)">2×</button>
+          <button class="mp-sb" onclick="setSpeed(5, this)">5×</button>
+        </div>
+      </div>
+      <div class="mp-bat">
+        <div class="mp-bat-row">
+          <span class="mp-bat-lbl">BATTERY</span>
+          <span class="mp-bat-pct" id="mp-bat-pct">100%</span>
+        </div>
+        <div class="mp-bat-track">
+          <div class="mp-bat-fill" id="mp-bat-fill"></div>
+        </div>
+      </div>
+    </div>
 
   </div>
 
