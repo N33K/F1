@@ -12,6 +12,9 @@
   --teal:      #00D2BE;
   --orange:    #FF8000;
   --crimson:   #DC143C;
+  --green:     #22C55E;
+  --blue:      #3B8BD4;
+  --yellow:    #FFD60A;
   --text:      #F0F0F0;
   --muted:     #8892AA;
   --dim:       #3D4560;
@@ -297,8 +300,8 @@ html, body {
   cursor: wait;
 }
 
-/* ── SVG panel ─────────────────────────────────────────────────────── */
-.svg-panel {
+/* ── Phase panel ───────────────────────────────────────────────────── */
+.phase-panel {
   background: var(--bg2);
   border: 1px solid var(--border2);
   border-radius: 12px;
@@ -306,157 +309,206 @@ html, body {
   margin-bottom: 16px;
 }
 
-.svg-wrap {
-  width: 100%;
-  max-width: 420px;
-  margin: 0 auto 16px;
-  position: relative;
-  min-height: 200px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.svg-loading {
+.phase-panel-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2.5px;
   color: var(--muted);
-  font-size: 12px;
-  letter-spacing: 1px;
-}
-
-/* The circuit SVG itself */
-.svg-wrap svg {
-  width: 100%;
-  height: auto;
-  display: block;
-}
-
-/* Base track — dim grey underlay */
-.track-base {
-  fill: none;
-  stroke: var(--bg4);
-  stroke-width: 20;
-  stroke-linejoin: round;
-  stroke-linecap: round;
-}
-
-/* Animated energy overlay */
-.track-energy {
-  fill: none;
-  stroke-width: 20;
-  stroke-linejoin: round;
-  stroke-linecap: round;
-  transition: stroke 0.3s;
-}
-
-/* ── Energy bar ────────────────────────────────────────────────────── */
-.energy-bar-wrap {
-  display: flex;
-  align-items: center;
-  gap: 10px;
   margin-bottom: 14px;
 }
 
-.energy-bar-label {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 2px;
-  color: var(--muted);
-  min-width: 90px;
+/* Static reference shape from f1-circuits-svg — an <img> tag so the SVG's
+   own markup (including its outline layer) is never touched or stripped. */
+.track-map {
+  display: flex;
+  justify-content: center;
+  padding: 8px 0;
 }
 
-.energy-bar-track {
-  flex: 1;
-  height: 8px;
-  background: var(--bg4);
-  border-radius: 4px;
+.track-map img {
+  width: 100%;
+  max-width: 320px;
+  height: auto;
+}
+
+/* One continuous, gapless bar spanning the whole lap distance — coloured
+   per metre by which regen/deployment system was active there, rather than
+   split into separate labeled blocks. */
+.soc-timeline {
+  display: flex;
+  width: 100%;
+  height: 200px;
+  border-radius: 6px;
   overflow: hidden;
 }
 
-.energy-bar-fill {
+.soc-timeline-run {
   height: 100%;
-  width: 100%;
-  border-radius: 4px;
-  background: var(--teal);
-  transition: width 0.1s linear, background 0.3s;
 }
 
-.energy-bar-pct {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text);
-  min-width: 38px;
-  text-align: right;
-}
+.soc-timeline-run.charge    { background: var(--blue); }
+.soc-timeline-run.discharge { background: var(--red); }
+.soc-timeline-run.liftcoast { background: var(--green); }
 
-/* ── Animation controls ────────────────────────────────────────────── */
-.anim-controls {
-  display: flex;
+/* Shown instead of coloured runs when a circuit has no cached telemetry */
+.soc-timeline.no-data {
+  background: #000;
   align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
-}
-
-.anim-btn {
-  background: var(--red);
-  border: none;
-  color: #fff;
-  padding: 8px 18px;
-  border-radius: 6px;
-  font-family: 'Titillium Web', sans-serif;
+  justify-content: center;
+  color: var(--muted);
   font-size: 12px;
-  font-weight: 700;
   letter-spacing: 1px;
-  cursor: pointer;
-  transition: opacity 0.2s;
+  text-transform: uppercase;
 }
 
-.anim-btn:hover { opacity: 0.85; }
+.phase-legend {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: var(--muted);
+  margin-top: 14px;
+}
 
-.anim-speed {
+.phase-legend .dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 5px;
+}
+
+.phase-legend .dot.charge    { background: var(--blue); }
+.phase-legend .dot.discharge { background: var(--red); }
+.phase-legend .dot.liftcoast { background: var(--green); }
+
+/* Injected inline (not <img>) so JS can read the SVG's own path geometry
+   to calibrate the hover-marker below — see calibrateTrack() in app.js. */
+.track-map svg {
+  width: 100%;
+  max-width: 320px;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+
+/* Positioned via cx/cy in the SVG's own coordinate space, so it tracks
+   correctly regardless of how the SVG is scaled on screen. */
+.track-marker {
+  fill: var(--red);
+  stroke: #fff;
+  stroke-width: 2;
+  pointer-events: none;
+}
+
+/* ── SOC graph (secondary — battery charge is no longer the headline
+   visualization; see the speed/power graph above it) ─────────────────── */
+.soc-graph-wrap {
+  position: relative;
+  width: 100%;
+  height: 220px;
+}
+
+.soc-graph-wrap--secondary { height: 120px; }
+
+.soc-graph {
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: crosshair;
+}
+
+.soc-graph-fill     { fill: var(--teal); opacity: 0.12; }
+.soc-graph-line      { fill: none; stroke: var(--teal); stroke-width: 2; }
+.soc-graph-baseline  { stroke: var(--border2); stroke-width: 1; stroke-dasharray: 4 4; }
+.soc-graph-cursor    { stroke: var(--muted); stroke-width: 1; opacity: 0; }
+.soc-graph-dot       { fill: var(--teal); stroke: var(--bg2); stroke-width: 2; opacity: 0; }
+
+.soc-graph-nodata {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  border-radius: 6px;
   display: flex;
   align-items: center;
-  gap: 4px;
-}
-
-.anim-speed-label {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 2px;
+  justify-content: center;
   color: var(--muted);
-  margin-right: 4px;
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
 }
 
-.speed-btn {
-  background: transparent;
+/* ── Speed & electrical deployment graph (the headline visualization —
+   shows the sudden speed penalty when deployment power decays away) ──── */
+.speed-power-graph-wrap {
+  position: relative;
+  width: 100%;
+  height: 240px;
+}
+
+.speed-power-graph {
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: crosshair;
+}
+
+.speed-power-graph-fill      { fill: var(--orange); opacity: 0.25; }
+.speed-power-graph-power-line { fill: none; stroke: var(--orange); stroke-width: 1.5; opacity: 0.7; }
+.speed-power-graph-speed-line { fill: none; stroke: var(--teal); stroke-width: 2.5; }
+.speed-power-graph-baseline   { stroke: var(--border2); stroke-width: 1; stroke-dasharray: 4 4; }
+.speed-power-graph-cursor     { stroke: var(--muted); stroke-width: 1; opacity: 0; }
+.speed-power-graph-dot        { fill: var(--teal); stroke: var(--bg2); stroke-width: 2; opacity: 0; }
+
+.speed-power-graph-nodata {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* ── Shared chart tooltip (speed/power graph + SOC graph) ─────────────── */
+.chart-tooltip {
+  position: fixed;
+  z-index: 500;
+  background: var(--bg3);
   border: 1px solid var(--border2);
-  color: var(--muted);
-  width: 34px;
-  height: 28px;
-  border-radius: 4px;
-  font-family: 'Titillium Web', sans-serif;
+  border-radius: 8px;
+  padding: 10px 12px;
   font-size: 11px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.15s;
+  line-height: 1.6;
+  color: var(--text);
+  pointer-events: none;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+  min-width: 160px;
 }
 
-.speed-btn:hover, .speed-btn.active {
-  background: var(--bg4);
-  border-color: var(--teal);
+.chart-tooltip-title {
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
   color: var(--teal);
 }
 
-.lap-timer {
-  margin-left: auto;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text);
-  letter-spacing: 1px;
+.chart-tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
 }
 
-.lap-total {
-  color: var(--muted);
-  font-weight: 400;
+.chart-tooltip-row span:last-child {
+  color: var(--text);
+  font-weight: 600;
 }
 
 /* ── No data banner ────────────────────────────────────────────────── */
@@ -677,12 +729,6 @@ html, body {
   cursor: pointer;
 }
 
-/* ── Mobile bottom player ───────────────────────────────────────────── */
-/* Hidden on desktop — shown only inside the media query below */
-.mobile-player {
-  display: none;
-}
-
 @media (max-width: 768px) {
 
   /* Show / hide toggles */
@@ -714,19 +760,12 @@ html, body {
 
   .mob-overlay.open { display: block; }
 
-  /* ── Main panel full width, pad bottom for player ── */
+  /* ── Main panel full width ── */
   .main-panel {
     width: 100%;
-    padding: 14px 12px 165px;
+    padding: 14px 12px 24px;
     overflow-y: auto;
   }
-
-  /* ── SVG panel ── */
-  .svg-wrap { max-width: 100%; }
-
-  /* Hide desktop animation controls — mobile player handles this ── */
-  .anim-controls   { display: none; }
-  .energy-bar-wrap { display: none; }
 
   /* ── Metric cards: force 2 columns ── */
   .metrics-row {
@@ -743,198 +782,5 @@ html, body {
 
   /* ── Detail header ── */
   .detail-name { font-size: 20px; }
-
-  /* ── Mobile bottom player ── */
-  .mobile-player {
-    display: flex;
-    flex-direction: column;
-    position: fixed;
-    bottom: 0; left: 0; right: 0;
-    background: var(--bg2);
-    border-top: 1px solid var(--border2);
-    padding: 10px 14px 18px;
-    z-index: 100;
-    gap: 0;
-  }
-
-  /* Track name + timer */
-  .mp-top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 6px;
-  }
-
-  .mp-name {
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--text);
-    letter-spacing: 0.3px;
-  }
-
-  .mp-sub {
-    font-size: 9px;
-    color: var(--muted);
-    margin-top: 1px;
-    letter-spacing: 0.5px;
-  }
-
-  .mp-timer {
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--text);
-    letter-spacing: 1px;
-    white-space: nowrap;
-  }
-
-  .mp-total {
-    color: var(--muted);
-    font-weight: 400;
-  }
-
-  /* Progress bar */
-  .mp-bar {
-    height: 3px;
-    background: var(--dim);
-    border-radius: 2px;
-    margin-bottom: 8px;
-    overflow: hidden;
-  }
-
-  .mp-prog {
-    height: 100%;
-    width: 0%;
-    background: var(--teal);
-    border-radius: 2px;
-    transition: width 0.1s linear, background 0.3s;
-  }
-
-  /* Row 1 — play + reset, full width, equal height */
-  .mp-row1 {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 8px;
-  }
-
-  .mp-play-btn {
-    flex: 1;
-    height: 34px;
-    background: var(--red);
-    color: #fff;
-    border: none;
-    border-radius: 6px;
-    font-family: 'Titillium Web', sans-serif;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .mp-reset-btn {
-    flex: 1;
-    height: 34px;
-    background: none;
-    border: 1px solid var(--border2);
-    border-radius: 6px;
-    color: var(--muted);
-    font-family: 'Titillium Web', sans-serif;
-    font-size: 12px;
-    font-weight: 700;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  /* Row 2 — speed buttons + battery bar */
-  .mp-row2 {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .mp-spd {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-shrink: 0;
-  }
-
-  .mp-spd-lbl {
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 1.5px;
-    color: var(--muted);
-    text-transform: uppercase;
-  }
-
-  .mp-spd-btns {
-    display: flex;
-    gap: 3px;
-  }
-
-  .mp-sb {
-    background: none;
-    border: 1px solid var(--border2);
-    color: var(--muted);
-    border-radius: 4px;
-    padding: 3px 8px;
-    font-family: 'Titillium Web', sans-serif;
-    font-size: 10px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-
-  .mp-sb.active {
-    border-color: var(--teal);
-    color: var(--teal);
-  }
-
-  /* Battery bar */
-  .mp-bat {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-  }
-
-  .mp-bat-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .mp-bat-lbl {
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 1.5px;
-    color: var(--muted);
-    text-transform: uppercase;
-  }
-
-  .mp-bat-pct {
-    font-size: 10px;
-    font-weight: 700;
-    color: var(--teal);
-  }
-
-  .mp-bat-track {
-    height: 5px;
-    background: var(--dim);
-    border-radius: 3px;
-    overflow: hidden;
-  }
-
-  .mp-bat-fill {
-    height: 100%;
-    width: 100%;
-    background: var(--teal);
-    border-radius: 3px;
-    transition: width 0.1s linear, background 0.3s;
-  }
 
 }

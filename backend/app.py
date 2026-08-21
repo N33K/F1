@@ -3,7 +3,7 @@ import json
 import logging
 import subprocess
 import sys
-from flask import Flask, jsonify, send_from_directory, abort
+from flask import Flask, jsonify, send_from_directory, abort, request
 
 logging.basicConfig(
     level=logging.INFO,
@@ -40,6 +40,27 @@ def load_overrides() -> dict:
             return json.load(f)
     except FileNotFoundError:
         return {"events": []}
+
+
+
+def get_recharge_limit_mj(circuit_id: str, session: str) -> float | None:
+    overrides = load_overrides()
+
+    for event in overrides.get("events", []):
+        if event.get("event") != circuit_id:
+            continue
+
+        limits = event.get("limits", {})
+
+        if session == "qualifying":
+            return limits.get("qualifying")
+
+        # For race pace, use the overtake-inactive figure — that's the
+        # baseline limit a car runs to for most of a lap. The overtake-active
+        # value is a situational bonus, not the lap-long budget.
+        return limits.get("race", {}).get("overtake_inactive")
+
+    return None
 
 
 def merge_circuit_data() -> list:
@@ -79,6 +100,7 @@ def merge_circuit_data() -> list:
             "race_laps":    circuit["race_laps"],
             "energy_type":  circuit["energy_type"],
             "svg_file":     circuit.get("svg_file"),
+            "svg_direction_reversed": circuit.get("svg_direction_reversed", False),
             "limits":       None,
             "source_url":   None,
             "extracted_at": None,
@@ -234,10 +256,15 @@ def status():
 
 @app.route("/svgs/<filename>")
 def serve_svg(filename: str):
-    """Serves circuit SVG files from the cloned repo."""
+    """
+    Serves circuit SVG files from the cloned repo. Uses the "white-outline"
+    variant — the base white track ribbon plus a thin contrasting outline
+    stroked on top of the same path — so the track shape stays legible
+    against the app's dark theme rather than just a plain white ribbon.
+    """
     svg_dir = os.path.join(
         BASE_DIR,
-        "../f1-circuits-svg/circuits/detailed/black-outline"
+        "../f1-circuits-svg/circuits/detailed/white-outline"
     )
     return send_from_directory(svg_dir, filename)
 
@@ -246,6 +273,102 @@ def serve_svg(filename: str):
 def serve_frontend(filename: str):
     """Serves any static file from the frontend folder."""
     return send_from_directory(FRONTEND_DIR, filename)
+
+
+
+@app.route("/api/simulate/<circuit_id>", methods=["GET"])
+def simulate_circuit(circuit_id: str):
+    """
+    Runs the physics energy model for one circuit.
+
+    Query params:
+        session      race | qualifying           (default: race)
+        elevation    metres                      (default: 0)
+        temp         air temperature in Celsius  (default: 25)
+
+    Example: GET /api/simulate/miami?session=race&elevation=2&temp=29
+
+    Returns 503 rather than 500 when telemetry isn't available for a circuit,
+    since that's an expected missing-data state, not a server fault.
+    """
+    # Imported here, not at module top: pandas and numpy take a noticeable
+    # moment to import, and every other route works fine without them. This
+    # keeps app startup fast and keeps the rest of the API unaffected if the
+    # scientific stack ever fails to install.
+    from energy_model import run_lap_simulation
+    from telemetry import load_telemetry
+
+    session = request.args.get("session", "race")
+
+    scenario = {
+        "race":       "race_pace",
+        "qualifying": "qualifying",
+    }.get(session)
+
+    if scenario is None:
+        return jsonify({
+            "error": f"Unknown session '{session}'. Use 'race' or 'qualifying'."
+        }), 400
+
+    try:
+        elevation_m = float(request.args.get("elevation", 0))
+        air_temp_c  = float(request.args.get("temp", 25))
+    except ValueError:
+        return jsonify({"error": "elevation and temp must be numbers"}), 400
+
+    circuits = load_circuits()
+    circuit  = circuits["circuits"].get(circuit_id)
+
+    if circuit is None:
+        log.warning(f"Simulation requested for unknown circuit: {circuit_id}")
+        abort(404)
+
+    telemetry = load_telemetry(
+        circuit_id,
+        session      = session,
+        circuit_name = circuit.get("circuit"),
+        allow_fastf1 = False,   # never hit the network from the server
+    )
+
+    if telemetry is None:
+        log.info(f"No telemetry cached for {circuit_id}/{session}")
+        return jsonify({
+            "error":      "no_telemetry",
+            "circuit_id": circuit_id,
+            "session":    session,
+            "message":    (
+                f"No telemetry cached for {circuit_id}/{session}. Generate it "
+                f"locally with: python backend/telemetry.py export {circuit_id}"
+            ),
+        }), 503
+
+    recharge_limit_mj = get_recharge_limit_mj(circuit_id, session)
+
+    try:
+        result = run_lap_simulation(
+            telemetry, circuits, circuit_id, scenario,
+            recharge_limit_mj = recharge_limit_mj,
+            elevation_m       = elevation_m,
+            air_temp_c        = air_temp_c,
+        )
+    except ValueError as e:
+        # Bad data rather than a crash — surface the model's own message.
+        log.error(f"Simulation failed for {circuit_id}: {e}")
+        return jsonify({"error": "simulation_failed", "message": str(e)}), 422
+    except Exception as e:
+        log.error(f"Unexpected simulation error for {circuit_id}: {e}")
+        return jsonify({"error": "internal_error", "message": str(e)}), 500
+
+    # The DataFrames are dropped here deliberately: they're a debugging
+    # convenience for local work, not something the frontend needs, and
+    # serialising ~20 corner rows per request is wasted bandwidth.
+    return jsonify({
+        "circuit_id": circuit_id,
+        "session":    session,
+        "summary":    result["summary"],
+        "meta":       result["meta"],
+        "segments":   result["segment_results"],
+    })
 
 
 # ── Run ──────────────────────────────────────────────────────────────────────
