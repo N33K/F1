@@ -1,0 +1,29 @@
+# Local context / notes (not committed)
+context/
+*.context.md
+CLAUDE.local.md
+.claude/
+.md
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+
+# Environment / secrets
+.env
+.env.*
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+data/fastf1_cache/

@@ -61,7 +61,7 @@
         <div class="empty-icon">⚡</div>
         <p class="empty-title">Select a circuit</p>
         <p class="empty-sub">Choose a Grand Prix from the calendar to see its
-          energy profile and animated lap simulation.</p>
+          energy profile and lap-by-lap phase breakdown.</p>
       </div>
 
       <div class="circuit-detail" id="circuit-detail" style="display:none">
@@ -78,34 +78,32 @@
           </button>
         </div>
 
-        <div class="svg-panel">
-          <div class="svg-wrap" id="svg-wrap">
-            <div class="svg-loading" id="svg-loading">Loading circuit...</div>
-          </div>
+        <div class="phase-panel">
+          <div class="phase-panel-label">CIRCUIT MAP</div>
+          <div class="track-map" id="track-map"></div>
+        </div>
 
-          <div class="energy-bar-wrap">
-            <div class="energy-bar-label">BATTERY STATE</div>
-            <div class="energy-bar-track">
-              <div class="energy-bar-fill" id="energy-bar-fill"></div>
-            </div>
-            <div class="energy-bar-pct" id="energy-bar-pct">100%</div>
+        <div class="phase-panel">
+          <div class="phase-panel-label">SPEED &amp; ELECTRICAL DEPLOYMENT — WHERE ENERGY LIMITS COST SPEED</div>
+          <div class="speed-power-graph-wrap" id="speed-power-graph-wrap">
+            <svg class="speed-power-graph" id="speed-power-graph" viewBox="0 0 1000 240" preserveAspectRatio="none"></svg>
+            <div class="speed-power-graph-nodata" id="speed-power-graph-nodata" style="display:none">No data found</div>
           </div>
-
-          <div class="anim-controls">
-            <button class="anim-btn" id="play-btn"
-                    onclick="toggleAnimation()">▶ Play lap</button>
-            <div class="anim-speed">
-              <span class="anim-speed-label">SPEED</span>
-              <button class="speed-btn active" onclick="setSpeed(1, this)">1×</button>
-              <button class="speed-btn" onclick="setSpeed(2, this)">2×</button>
-              <button class="speed-btn" onclick="setSpeed(5, this)">5×</button>
-            </div>
-            <div class="lap-timer">
-              LAP <span id="lap-time-display">0.0s</span>
-              <span class="lap-total" id="lap-total">/ 0.0s</span>
-            </div>
+          <div class="phase-legend">
+            <span><span class="dot" style="background:var(--teal)"></span>Speed</span>
+            <span><span class="dot" style="background:var(--orange)"></span>Electrical deployment power</span>
           </div>
         </div>
+
+        <div class="phase-panel">
+          <div class="phase-panel-label">BATTERY STATE OF CHARGE</div>
+          <div class="soc-graph-wrap soc-graph-wrap--secondary" id="soc-graph-wrap">
+            <svg class="soc-graph" id="soc-graph" viewBox="0 0 1000 120" preserveAspectRatio="none"></svg>
+            <div class="soc-graph-nodata" id="soc-graph-nodata" style="display:none">No data found</div>
+          </div>
+        </div>
+
+        <div class="chart-tooltip" id="chart-tooltip" style="display:none"></div>
 
         <div class="no-data-banner" id="no-data-banner" style="display:none">
           <span>⚠ No official data fetched for this circuit yet.</span>
@@ -132,52 +130,6 @@
 
       </div>
     </main>
-  </div>
-
-  <!-- ── Mobile bottom player ───────────────────────────────────────── -->
-  <div class="mobile-player" id="mobile-player">
-
-    <div class="mp-top">
-      <div class="mp-track">
-        <div class="mp-name" id="mp-name">Select a circuit</div>
-        <div class="mp-sub" id="mp-sub">—</div>
-      </div>
-      <div class="mp-timer">
-        <span id="mp-lap-time">0.0s</span>
-        <span class="mp-total" id="mp-total">/ —</span>
-      </div>
-    </div>
-
-    <div class="mp-bar">
-      <div class="mp-prog" id="mp-prog"></div>
-    </div>
-
-    <div class="mp-row1">
-      <button class="mp-play-btn" id="mp-play-btn"
-              onclick="toggleAnimation()">▶ Play lap</button>
-      <button class="mp-reset-btn" onclick="resetAnimationUI()">↺ Reset</button>
-    </div>
-
-    <div class="mp-row2">
-      <div class="mp-spd">
-        <span class="mp-spd-lbl">Speed</span>
-        <div class="mp-spd-btns">
-          <button class="mp-sb active" onclick="setSpeed(1, this)">1×</button>
-          <button class="mp-sb" onclick="setSpeed(2, this)">2×</button>
-          <button class="mp-sb" onclick="setSpeed(5, this)">5×</button>
-        </div>
-      </div>
-      <div class="mp-bat">
-        <div class="mp-bat-row">
-          <span class="mp-bat-lbl">BATTERY</span>
-          <span class="mp-bat-pct" id="mp-bat-pct">100%</span>
-        </div>
-        <div class="mp-bat-track">
-          <div class="mp-bat-fill" id="mp-bat-fill"></div>
-        </div>
-      </div>
-    </div>
-
   </div>
 
   <script src="app.js"></script>

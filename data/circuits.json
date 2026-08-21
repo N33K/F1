@@ -3,7 +3,7 @@
   "_last_updated": "2026-07-29",
   "_season": 2026,
 
-"aero_profile": {
+"downforce_level": {
   "low_downforce":    { "CdA_corner": 0.62, "CdA_straight": 0.45, "ClA": 2.2 },
   "medium_downforce": { "CdA_corner": 0.78, "CdA_straight": 0.58, "ClA": 2.9 },
   "high_downforce":   { "CdA_corner": 0.94, "CdA_straight": 0.72, "ClA": 3.9 }
@@ -20,7 +20,7 @@
       "race_laps": 58,
       "energy_type": "balanced",
       "svg_file" : "melbourne-2.svg",
-      "aero_profile" : "medium_downforce"
+      "downforce_level" : "medium_downforce"
     },
     "china": {
       "name": "Chinese Grand Prix",
@@ -32,7 +32,7 @@
       "race_laps": 56,
       "energy_type": "balanced",
       "svg_file" : "shanghai-1.svg",
-      "aero_profile" : "medium_downforce"
+      "downforce_level" : "medium_downforce"
     },
     "japan": {
       "name": "Japanese Grand Prix",
@@ -44,7 +44,7 @@
       "race_laps": 53,
       "energy_type": "balanced",
       "svg_file" : "suzuka-2.svg",
-      "aero_profile" : "medium_downforce"
+      "downforce_level" : "medium_downforce"
     },
     "bahrain": {
       "name": "Bahrain Grand Prix",
@@ -56,7 +56,7 @@
       "race_laps": 57,
       "energy_type": "balanced",
       "svg_file" : "bahrain-1.svg",
-      "aero_profile" : "medium_downforce"
+      "downforce_level" : "medium_downforce"
     },
     "saudi_arabia": {
       "name": "Saudi Arabian Grand Prix",
@@ -68,7 +68,7 @@
       "race_laps": 50,
       "energy_type": "poor",
       "svg_file" : "jeddah-1.svg",
-      "aero_profile" : "low_downforce"
+      "downforce_level" : "low_downforce"
     },
     "miami": {
       "name": "Miami Grand Prix",
@@ -80,7 +80,8 @@
       "race_laps": 57,
       "energy_type": "balanced",
       "svg_file" : "miami-1.svg",
-      "aero_profile" : "medium_downforce"
+      "downforce_level" : "medium_downforce",
+      "svg_direction_reversed": true
     },
     "canada": {
       "name": "Canadian Grand Prix",
@@ -92,7 +93,8 @@
       "race_laps": 70,
       "energy_type": "balanced",
       "svg_file" : "montreal-6.svg",
-      "aero_profile" : "medium_downforce"
+      "downforce_level" : "medium_downforce",
+      "svg_direction_reversed": true
     },
     "monaco": {
       "name": "Monaco Grand Prix",
@@ -104,7 +106,8 @@
       "race_laps": 78,
       "energy_type": "rich",
       "svg_file" : "monaco-6.svg",
-      "aero_profile" : "high_downforce"
+      "downforce_level" : "high_downforce",
+      "svg_direction_reversed": true
     },
     "spain": {
       "name": "Barcelona-Catalunya Grand Prix",
@@ -116,7 +119,8 @@
       "race_laps": 66,
       "energy_type": "balanced",
       "svg_file" : "catalunya-6.svg",
-      "aero_profile" : "medium_downforce"
+      "downforce_level" : "medium_downforce",
+      "svg_direction_reversed": true
     },
     "austria": {
       "name": "Austrian Grand Prix",
@@ -128,7 +132,7 @@
       "race_laps": 71,
       "energy_type": "balanced",
       "svg_file" : "spielberg-3.svg",
-      "aero_profile" : "medium_downforce"
+      "downforce_level" : "medium_downforce"
     },
     "great_britain": {
       "name": "British Grand Prix",
@@ -140,7 +144,7 @@
       "race_laps": 52,
       "energy_type": "balanced",
       "svg_file" : "silverstone-8.svg",
-      "aero_profile" : "medium_downforce"
+      "downforce_level" : "medium_downforce"
     },
     "belgium": {
       "name": "Belgian Grand Prix",
@@ -152,7 +156,7 @@
       "race_laps": 44,
       "energy_type": "balanced",
       "svg_file" : "spa-francorchamps-4.svg",
-      "aero_profile" : "medium_downforce"
+      "downforce_level" : "medium_downforce"
     },
     "hungary": {
       "name": "Hungarian Grand Prix",
@@ -164,7 +168,7 @@
       "race_laps": 70,
       "energy_type": "rich",
       "svg_file" : "hungaroring-3.svg",
-      "aero_profile" : "high_downforce"
+      "downforce_level" : "high_downforce"
     },
     "netherlands": {
       "name": "Dutch Grand Prix",
@@ -176,7 +180,7 @@
       "race_laps": 72,
       "energy_type": "balanced",
       "svg_file" : "zandvoort-5.svg",
-      "aero_profile" : "medium_downforce"
+      "downforce_level" : "medium_downforce"
     },
     "italy": {
       "name": "Italian Grand Prix",
@@ -188,7 +192,7 @@
       "race_laps": 53,
       "energy_type": "poor",
       "svg_file" : "monza-7.svg",
-      "aero_profile" : "low_downforce"
+      "downforce_level" : "low_downforce"
     },
     "madrid": {
       "name": "Spanish Grand Prix",
@@ -200,7 +204,7 @@
       "race_laps": 60,
       "energy_type": "balanced",
       "svg_file" : "madring-1.svg",
-      "aero_profile" : "medium_downforce"
+      "downforce_level" : "medium_downforce"
     },
     "azerbaijan": {
       "name": "Azerbaijan Grand Prix",
@@ -212,7 +216,7 @@
       "race_laps": 51,
       "energy_type": "poor",
       "svg_file" : "baku-1.svg",
-      "aero_profile" : "low_downforce"
+      "downforce_level" : "low_downforce"
     },
     "singapore": {
       "name": "Singapore Grand Prix",
@@ -224,7 +228,7 @@
       "race_laps": 62,
       "energy_type": "rich",
       "svg_file" : "marina-bay-4.svg",
-      "aero_profile" : "high_downforce"
+      "downforce_level" : "high_downforce"
     },
     "usa": {
       "name": "United States Grand Prix",
@@ -236,7 +240,7 @@
       "race_laps": 56,
       "energy_type": "balanced",
       "svg_file" : "austin-1.svg",
-      "aero_profile" : "medium_downforce"
+      "downforce_level" : "medium_downforce"
     },
     "mexico": {
       "name": "Mexico City Grand Prix",
@@ -248,7 +252,7 @@
       "race_laps": 71,
       "energy_type": "balanced",
       "svg_file" : "mexico-city-3.svg",
-      "aero_profile" : "medium_downforce"
+      "downforce_level" : "medium_downforce"
     },
     "brazil": {
       "name": "Brazilian Grand Prix",
@@ -260,7 +264,7 @@
       "race_laps": 71,
       "energy_type": "rich",
       "svg_file" : "interlagos-2.svg",
-      "aero_profile" : "medium_downforce"
+      "downforce_level" : "medium_downforce"
     },
     "las_vegas": {
       "name": "Las Vegas Grand Prix",
@@ -272,7 +276,7 @@
       "race_laps": 50,
       "energy_type": "poor",
       "svg_file" : "las-vegas-1.svg",
-      "aero_profile" : "low_downforce"
+      "downforce_level" : "low_downforce"
     },
     "qatar": {
       "name": "Qatar Grand Prix",
@@ -284,7 +288,7 @@
       "race_laps": 57,
       "energy_type": "balanced",
       "svg_file" : "lusail-1.svg",
-      "aero_profile" : "medium_downforce"
+      "downforce_level" : "medium_downforce"
     },
     "abu_dhabi": {
       "name": "Abu Dhabi Grand Prix",
@@ -296,7 +300,7 @@
       "race_laps": 58,
       "energy_type": "balanced",
       "svg_file" : "yas-marina-2.svg",
-      "aero_profile" : "medium_downforce"
+      "downforce_level" : "medium_downforce"
     }
   },
 

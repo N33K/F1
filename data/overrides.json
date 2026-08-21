@@ -141,6 +141,20 @@
       }
     },
     {
+      "event": "netherlands",
+      "source_url": "https://www.fia.com/system/files/documents/doc_3_-_2026_dutch_grand_prix_-_power_unit_information.pdf",
+      "extracted_at": "2026-08-21T17:44:21.697524",
+      "limits": {
+        "race": {
+          "overtake_inactive": 8.5,
+          "overtake_active": 9.0
+        },
+        "qualifying": 7.5,
+        "free_practice": 9.0,
+        "out_laps": 9.0
+      }
+    },
+    {
       "event": "spain",
       "source_url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_power_unit_information.pdf",
       "extracted_at": "2026-07-29T22:51:52.722378",
