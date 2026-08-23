@@ -1,11 +1,28 @@
 """
-F1 2026 Energy Recovery / Deployment Model — v1 (finalized)
+F1 2026 Energy Recovery / Deployment Model — v3 (telemetry-driven speed,
+regulatory-max deployment)
 =============================================================
 
-A physics-based simulation of MGU-K energy recovery and deployment across
-a lap, built and validated against real 2026 FastF1 telemetry from four
-circuits (Miami, Monaco, Hungary, Silverstone) across three downforce
-categories and multiple driving styles.
+Computes MGU-K energy recovery/deployment across a lap. Speed is read
+directly from REAL telemetry (interpolated by distance) rather than
+independently re-simulated from a force-balance model — v1 forward-simulated
+speed via an inferred gear/RPM curve, a tire-traction ceiling, and a
+throttle ramp-up curve; it could overshoot the real recorded top speed by
+double digits of km/h with nothing structurally preventing it (see git
+history / session notes if you need the old approach for reference).
+
+Deployment POWER, however, is modeled on regulatory behavior, not derived
+from that real motion: whenever a driver is at full throttle with SOC
+available, they deploy the maximum MGU-K power the decay curve and battery
+allow — full stop. (v2 briefly computed deploy_power as a residual —
+required_power, from real acceleration, minus what the ICE alone could
+supply at the real RPM — but near real cruising speed, drag rises so
+steeply with v^2 that this residual collapses to near zero regardless of
+how much power actually produced that speed; that's just what a
+terminal-velocity plateau looks like, not evidence of low deployment. It
+underestimated lap-wide deployment by roughly 5-10x versus what real
+telemetry/HUDs show, and is why this module no longer does it — see
+deploy_power in simulate_lap()'s drive-phase loop.)
 
 USAGE — the one function you need:
 
@@ -23,7 +40,7 @@ USAGE — the one function you need:
     print(result['summary'])        # total MJ recovered/deployed, corner counts, etc.
 
 WHAT'S INCLUDED:
-  - 2026 regulatory constants (MGU-K 350kW, 4MJ battery, 400kW ICE, mass, fuel)
+  - 2026 regulatory constants (MGU-K 350kW, 4MJ battery, mass, fuel)
   - Two scenarios: qualifying (full SOC, light fuel) / race pace (50% SOC, half fuel)
   - Real per-circuit recharge limits pulled at runtime (not hardcoded — see
     run_lap_simulation's recharge_limit_mj argument), falling back to the
@@ -31,12 +48,12 @@ WHAT'S INCLUDED:
   - Per-circuit aero profiles (corner-mode vs. straight-mode Cd*A), read
     from circuits.json's downforce_level -> aero_profiles lookup
   - Air density from circuit elevation + session temperature
-  - Gear ratios reconstructed from real telemetry, with a STATEFUL upshift
-    model (seeded from corner-exit speed, upshifts one gear at a time —
-    critical fix, since a naive per-speed lookup picks unrealistic gears)
-  - FIA-mandated normalized ICE power curve
-  - Tire traction limit (grip-based force ceiling, fades with speed via downforce)
-  - Throttle/traction ramp-up after corner exit (~1.2s, calibrated from real data)
+  - On a straight, real recorded speed (interpolated from telemetry by
+    distance — see real_speed_kmh() in simulate_lap()) drives the trace: no
+    gear/RPM inference, no traction-limit model, no throttle ramp-up curve,
+    nothing that could overshoot what the car actually did. Deployment
+    POWER, separately, is the regulatory decay-curve max — see the module
+    docstring above and deploy_power in simulate_lap().
   - Corner/straight extraction with TWO detection methods merged:
       1. Brake-signal based (hard braking zones), filtered for minimum
          distance AND genuine speed loss (rejects brake-signal flicker/noise)
@@ -47,9 +64,15 @@ WHAT'S INCLUDED:
     (prevents the car from spending the whole battery on the first straight)
   - Three distinct regen systems, each with its own FIA-mandated cap: 350kW
     mechanical-brake regen (braking corners), 250kW superclipping (crankshaft
-    regen concurrent with full-throttle deployment on straights), and 200kW
+    regen, mutually exclusive with deployment — see below), and 200kW
     lift-and-coast regen (crankshaft regen with zero throttle AND zero brake
     — coast phases and liftoff corners)
+  - Deployment and superclipping are mutually exclusive on a straight: the
+    motor cannot motor (draw from the battery) and generate (charge it) in
+    the same instant. A straight deploys at full (decaying) power until SOC
+    drops to SUPERCLIP_TRIGGER_SOC_FRACTION of battery_cap, then switches to
+    superclip regen (ICE alone drives, motor generates) for the rest of the
+    straight.
   - Deployment power decay: 350kW ramping down 50kW per second of continuous
     full-throttle deployment, resetting on any interruption, per the FIA's
     published deployment curve
@@ -58,33 +81,37 @@ WHAT'S INCLUDED:
     (200kW) and uses the corner (closed/high-drag) aero profile, rather than
     being energy- and drag-neutral
 
-VALIDATION RESULTS (deployment straights, the metric that matters):
-  Miami:       ~4-5% average error (medium downforce, aero-anchored)
-  Monaco:      ~7.2% average error (high downforce, aero estimate)
-  Hungary:     ~10.3% average error (high downforce, stress-tested trail-braking)
-  Silverstone: ~11-12% average error (medium downforce, one flagged outlier)
+VALIDATION APPROACH: speed is no longer an approximation being measured
+against telemetry — it IS telemetry, by construction, so a speed-matching
+error metric no longer means anything (v1's old 4-12% figures measured
+exactly that, and are obsolete here). Deployment power is a regulatory
+assumption (full decay-curve max at full throttle), not derived from
+telemetry either, so there's nothing to validate it against directly — what's
+worth sanity-checking is plausibility: per-straight deployment should stay
+within the decay curve's own ~1.2MJ ceiling per continuous run, lap totals
+should use a meaningful fraction of the battery's 4MJ capacity on tracks with
+long straights (not near-zero), and totals should be non-negative.
 
 KNOWN LIMITATIONS (accepted, not silently hidden):
-  - Short connector segments (<150m): consistently higher error — genuinely
-    hard to model at this length regardless of physics accuracy
+  - Deployment power is a regulatory-behavior assumption (drivers use
+    everything available), not derived from or reconciled against real
+    per-step motion — real telemetry only drives the displayed speed trace
+    and real corner entry/apex/exit speeds. This means total deployed vs.
+    regen energy for a straight isn't guaranteed to exactly explain that
+    straight's real speed delta; it's a plausible accounting of what the
+    power unit was doing, not a from-first-principles derivation of speed.
   - Lift-and-coast: real driver strategy choice, not modeled as a general
     rule (tested and reverted — a blanket rule hurt more than it helped)
-  - High-downforce aero (Cd*A) is a scaled estimate, not independently
-    anchored to real data the way medium-downforce was via Miami
   - Flat-out high-speed corner sequences with zero brake/throttle signature
-    (e.g. Silverstone's Maggotts-Becketts) are invisible to both detection
-    methods — a real structural gap, not a bug
-  - One team's gear ratios (fitted from VER/Red Bull-Ford) used as a
-    representative car — real ratios vary by team
-  - Superclipping/coast regen and the deployment decay curve are new
-    additions on top of the validated model above — the 4-12% error figures
-    predate these mechanics and haven't been re-checked against telemetry yet
+    (e.g. Silverstone's Maggotts-Becketts) are invisible to both corner-
+    detection methods — a real structural gap, not a bug
 """
 
 import json
 import math
 import numpy as np
 import pandas as pd
+from scipy.interpolate import PchipInterpolator
 
 
 # ---------------------------------------------------------------------------
@@ -95,9 +122,23 @@ P_MGUK_MAX = 350_000        # W, bidirectional (deploy + regen)
 BATTERY_CAP = 4_000_000     # J (4 MJ) — physical hardware cap on instantaneous charge
 
 # Superclipping: a separate crankshaft-connected regen system (distinct from
-# the mechanical-brake regen above), active concurrently with full-throttle
-# deployment on straights.
-P_SUPERCLIP_MAX = 250_000   # W — superclipping regen cap, concurrent with deployment
+# the mechanical-brake regen above). NOT concurrent with deployment — the
+# electric motor physically can't motor (draw from the battery) and generate
+# (charge it) at the same instant, so on a straight the car deploys at full
+# (decaying) power until SOC drops to SUPERCLIP_TRIGGER_SOC_FRACTION of
+# battery_cap, then the motor switches into generation mode for the rest of
+# the straight: ICE alone drives the car, superclipping regens up to
+# P_SUPERCLIP_MAX. (An earlier implementation ran deployment and superclip
+# regen every step simultaneously — not physically possible on one motor —
+# confirmed as a bug by the user and fixed here.)
+P_SUPERCLIP_MAX = 250_000   # W — superclipping regen cap, once triggered
+
+# Fraction of battery_cap that ends a straight's deploy phase and switches
+# the motor into superclip/regen mode for its remainder. Once triggered, the
+# straight stays in regen mode until it ends (or lift-and-coast takes over
+# right at the tail, if enabled) — it does not flip back to deploying even
+# if superclip regen charges SOC back above this threshold mid-straight.
+SUPERCLIP_TRIGGER_SOC_FRACTION = 0.20
 
 # Lift-and-coast: crankshaft regen with zero throttle AND zero brake — the
 # telemetry-measured coast phase between corners, and liftoff corners (a
@@ -108,7 +149,9 @@ P_LIFT_COAST_MAX = 200_000  # W — lift-and-coast regen cap
 # 300kW -> ... -> 0kW across 8 continuous seconds, per the FIA's published
 # deployment decay curve — rather than staying flat at P_MGUK_MAX the whole
 # time. Resets to the full 350kW whenever deployment is interrupted (a
-# corner, a coast phase, or the battery running dry).
+# corner, a coast phase, or the battery running dry). This only shapes
+# deploy-phase power — it has no effect on superclip regen, which is flat
+# once triggered (see P_SUPERCLIP_MAX above).
 DEPLOY_DECAY_RATE = 50_000  # W per second of continuous full-throttle deployment
 
 # Real per-lap recharge limits come from the FIA's "Power Unit Information" doc,
@@ -127,43 +170,41 @@ def mj_to_j(value_mj):
     PDFs, e.g. 8.5) to Joules, for passing into simulate_lap()."""
     return value_mj * 1_000_000
 
-P_ICE_MAX = 400_000         # W (400 kW)
-RPM_MAX = 15_000
-
 MIN_CAR_MASS = 768          # kg, no fuel
 MAX_RACE_FUEL = 70          # kg
 
 CRR = 0.015                 # rolling resistance coefficient, generic estimate — not F1-specific/verified
 G = 9.80665
 
-# Tire traction limit — the missing piece exposed by the gear-selection fix.
-# Real F1 cars are grip-limited at low speed: engine power alone doesn't
-# guarantee the tires can put it down without wheelspin. Approximated here as
-# mu * normal_load on the rear axle (the driven wheels), where normal_load
-# includes both static weight share and speed-dependent aero downforce —
-# which is why this constraint naturally fades out as speed builds (more
-# downforce = more available grip), matching real behavior: wheelspin risk
-# is highest right off a slow corner and disappears well before top speed.
-TIRE_MU = 1.6              # representative F1 slick friction coefficient — approximate, not tire-specific
-REAR_WEIGHT_FRACTION = 0.45  # rough static rear-axle load share — approximate
-
-# Real telemetry (Miami, corner-exit acceleration zones) shows acceleration
-# builds progressively over ~1.2s after a corner — 0.26g -> 0.53g -> 0.71g ->
-# 0.85g -> 1.06g across consecutive samples — rather than jumping instantly
-# to full available force. This is a genuine throttle/steering-unwind ramp,
-# not just a static grip ceiling, and it's exactly why short connector
-# straights previously overshot so badly: there's no time for a real car to
-# ramp up before the next braking zone, but the model was applying full
-# force immediately. Modeled here as a simple linear ramp on available drive
-# force over the first RAMP_UP_TIME_SEC of each straight.
-RAMP_UP_TIME_SEC = 1.2
+# FastF1's Speed channel is whole-km/h and only updates every few samples —
+# holding one rounded value for several consecutive rows, then jumping.
+# Interpolating real_speed_kmh() directly off those raw samples would give
+# the displayed speed trace a stair-step character it never really had.
+# Upsampling onto this dense, uniform distance grid via a shape-preserving
+# cubic (PCHIP) fit first — rather than plain linear interpolation — fills
+# the gaps between real samples with a smooth curve instead. See
+# _resample_telemetry() in simulate_lap().
+TELEMETRY_RESAMPLE_STEP_M = 2.0  # meters
 
 
-def max_traction_force(v_ms, mass_kg, cla, rho, mu=TIRE_MU, rear_fraction=REAR_WEIGHT_FRACTION):
-    """Max force (N) the rear tires can transmit before wheelspin, at a given speed."""
-    downforce = 0.5 * rho * cla * v_ms**2
-    normal_load_rear = rear_fraction * (mass_kg * G + downforce)
-    return mu * normal_load_rear
+def _resample_telemetry(telemetry, step_m=TELEMETRY_RESAMPLE_STEP_M):
+    """Upsamples raw telemetry (Distance/Speed) onto a dense, uniform-distance
+    grid via PCHIP interpolation — see TELEMETRY_RESAMPLE_STEP_M for why.
+    PCHIP is shape-preserving (no overshoot beyond neighboring sample
+    values), so it fills the gaps between real samples without inventing
+    speeds the telemetry never recorded. Returns (distance_m, speed_kmh)
+    arrays on the fine grid.
+    """
+    raw_distance = telemetry["Distance"].to_numpy()
+    _, unique_idx = np.unique(raw_distance, return_index=True)
+    unique_idx.sort()
+    raw_distance = raw_distance[unique_idx]
+    raw_speed = telemetry["Speed"].to_numpy()[unique_idx]
+
+    fine_distance = np.arange(raw_distance[0], raw_distance[-1], step_m)
+    speed_kmh = PchipInterpolator(raw_distance, raw_speed)(fine_distance)
+    return fine_distance, speed_kmh
+
 
 # Scenario definitions (locked in earlier)
 SCENARIOS = {
@@ -192,139 +233,7 @@ LIFT_AND_COAST_FRACTION = 0.3
 
 
 # ---------------------------------------------------------------------------
-# 2. FIA NORMALIZED ICE POWER CURVE
-# ---------------------------------------------------------------------------
-# N/Nmax vs P/Pmax, from the published regulation table.
-# Interpolated at runtime — NOTE: values transcribed from public reporting,
-# not the literal regulation PDF, treat as approximate.
-
-_RPM_FRAC = np.array([0.0, 0.55, 0.65, 0.75, 0.85, 0.90, 0.95, 1.00, 1.025])
-_POWER_FRAC = np.array([0.0, 0.50, 0.66, 0.83, 0.96, 0.99, 1.00, 0.99, 0.86])
-
-
-def ice_power_at_rpm(rpm):
-    """Returns ICE power output (W) at a given engine rpm."""
-    rpm_frac = np.clip(rpm / RPM_MAX, 0, _RPM_FRAC[-1])
-    power_frac = np.interp(rpm_frac, _RPM_FRAC, _POWER_FRAC)
-    return power_frac * P_ICE_MAX
-
-
-# ---------------------------------------------------------------------------
-# 3. GEAR RATIOS (reconstructed from FastF1 telemetry)
-# ---------------------------------------------------------------------------
-# Units: RPM per km/h (matches how they were fitted from telemetry).
-# Source: VER, throttle-filtered samples, averaged across Australia / Miami /
-# Great Britain / Hungary 2026. Gear 8's Great Britain sample was EXCLUDED —
-# it was contaminated by mid-braking gear-transition rows (Throttle==0),
-# confirmed by raw-sample inspection, not a real ratio difference.
-#
-# NOTE: this is one team's (Red Bull-Ford) ratios. Different teams will have
-# different values — treat this as a placeholder for "a representative car"
-# until/unless you fit ratios per-team.
-
-GEAR_RATIOS_RPM_PER_KMH = {
-    1: 113.55,
-    2: 91.37,
-    3: 74.02,
-    4: 64.08,
-    5: 54.39,
-    6: 46.68,
-    7: 40.57,
-    8: 36.41,
-}
-
-
-def fit_gear_ratios_from_telemetry(telemetry_df, min_throttle=100):
-    """
-    Refit gear ratios from a telemetry DataFrame with columns:
-    Speed (km/h), RPM, nGear, Throttle.
-
-    Filters to full-throttle samples only (avoids the mid-shift contamination
-    found in the Great Britain gear-8 investigation) and returns a dict of
-    {gear: mean_rpm_per_kmh}.
-    """
-    clean = telemetry_df[
-        (telemetry_df["nGear"] > 0) & (telemetry_df["Throttle"] >= min_throttle)
-    ].copy()
-    clean["rpm_per_kmh"] = clean["RPM"] / clean["Speed"]
-
-    return clean.groupby("nGear")["rpm_per_kmh"].mean().to_dict()
-
-
-def engine_rpm_for_speed(v_ms, gear, gear_ratios=GEAR_RATIOS_RPM_PER_KMH):
-    """v_ms -> engine RPM in a given gear, using RPM-per-km/h ratio."""
-    v_kmh = v_ms * 3.6
-    return gear_ratios[gear] * v_kmh
-
-
-# Shift point, derived from REAL data rather than assumed: the earlier
-# multi-track gear-ratio fitting (throttle=100 filtered, Australia/Miami/
-# Great Britain/Hungary) showed max observed RPM clustering tightly around
-# 11,700-12,100 across EVERY gear — not near the 15,000 rpm redline. That's
-# real evidence teams shift well before absolute redline (likely because the
-# next gear's power output already exceeds the current gear's power that
-# close to the limiter, or simply that FP/race straights end before redline
-# is reached). Using the empirical value here rather than a theoretical
-# percentage of RPM_MAX.
-SHIFT_RPM = 11_900
-
-
-def initial_gear_for_speed(v_ms, gear_ratios=GEAR_RATIOS_RPM_PER_KMH):
-    """
-    Gear a driver would already be in on exiting a corner at this speed —
-    the lowest gear whose RPM doesn't exceed the shift point. Used to seed
-    gear state at the start of a straight (we don't simulate the corner
-    itself shifting down, just infer a sensible starting gear from exit speed).
-    """
-    for gear in sorted(gear_ratios):
-        rpm = engine_rpm_for_speed(v_ms, gear, gear_ratios)
-        if rpm <= SHIFT_RPM:
-            return gear
-    return max(gear_ratios)  # fallback: speed exceeds every gear's comfortable range
-
-
-def next_gear(current_gear, v_ms, gear_ratios=GEAR_RATIOS_RPM_PER_KMH):
-    """
-    Upshifts by exactly one gear if current gear's RPM has crossed the shift
-    point — never skips gears, never downshifts while accelerating. This is
-    what makes the model correctly stay in a high gear at high speed (since
-    it arrived there by shifting up through every gear in between) while
-    still using an appropriately low gear — and real torque — right after a
-    slow corner, instead of the old stateless bug that picked top gear at
-    any speed including a dead-slow corner exit.
-    """
-    max_gear = max(gear_ratios)
-    if current_gear >= max_gear:
-        return current_gear
-    rpm = engine_rpm_for_speed(v_ms, current_gear, gear_ratios)
-    if rpm > SHIFT_RPM:
-        return current_gear + 1
-    return current_gear
-
-
-def F_ICE_at_gear(v_ms, gear, gear_ratios=GEAR_RATIOS_RPM_PER_KMH):
-    """Traction force (N) available from the ICE alone, in a specific gear."""
-    if v_ms <= 0.1:
-        return 0.0
-    rpm = engine_rpm_for_speed(v_ms, gear, gear_ratios)
-    power = ice_power_at_rpm(rpm)
-    return power / v_ms
-
-
-def F_ICE(v_ms, gear_ratios=GEAR_RATIOS_RPM_PER_KMH):
-    """
-    Stateless convenience wrapper — infers a gear from speed alone, ignoring
-    shift history. Fine for one-off checks/diagnostics, but simulate_lap()
-    uses F_ICE_at_gear() with real tracked gear state instead, since gear
-    choice genuinely depends on how you got to a given speed, not just the
-    speed itself (see next_gear() above).
-    """
-    gear = initial_gear_for_speed(v_ms, gear_ratios)
-    return F_ICE_at_gear(v_ms, gear, gear_ratios)
-
-
-# ---------------------------------------------------------------------------
-# 4. AERO PROFILES (from circuits.json)
+# 2. AERO PROFILES (from circuits.json)
 # ---------------------------------------------------------------------------
 
 def load_circuits(path="circuits.json"):
@@ -343,7 +252,7 @@ def get_aero_coeffs(circuits_data, track_key, mode="corner"):
 
 
 # ---------------------------------------------------------------------------
-# 5. AIR DENSITY (elevation + session temperature)
+# 3. AIR DENSITY (elevation + session temperature)
 # ---------------------------------------------------------------------------
 
 R_SPECIFIC = 287.05  # J/(kg*K), dry air
@@ -364,7 +273,7 @@ def air_density(elevation_m, air_temp_c):
 
 
 # ---------------------------------------------------------------------------
-# 6. CORNER / STRAIGHT EXTRACTION (from FastF1 telemetry)
+# 4. CORNER / STRAIGHT EXTRACTION (from FastF1 telemetry)
 # ---------------------------------------------------------------------------
 
 MIN_BRAKING_DISTANCE_M = 4.0    # brake-signal blips shorter than this are noise/trail-braking flicker, not real corners
@@ -602,7 +511,7 @@ def _measure_coast_length(telemetry, start_distance_m, length_m, lap_length_m,
 
 
 # ---------------------------------------------------------------------------
-# 7. THE SIMULATION
+# 5. THE SIMULATION
 # ---------------------------------------------------------------------------
 
 # FastF1 only exposes a boolean brake signal, not real pedal force, so the
@@ -657,7 +566,7 @@ TRACE_SAMPLE_EVERY_N_STEPS = 4  # ~0.2s at dt=0.05s
 
 def simulate_lap(corners_df, straights_df, mass_kg, soc_start_j,
                   aero_corner, aero_straight, rho,
-                  lap_recharge_limit, lap_length_m,
+                  lap_recharge_limit, lap_length_m, telemetry,
                   battery_cap=BATTERY_CAP,
                   lift_and_coast=False,
                   dt=0.05):
@@ -677,10 +586,28 @@ def simulate_lap(corners_df, straights_df, mass_kg, soc_start_j,
     decay curve would, handing the remaining time to unopposed superclip
     regen and inflating how often the battery sat pinned at full.
 
-    aero_corner / aero_straight: dicts with 'CdA' (m^2) and 'ClA' (m^2) —
-    ClA feeds the tire traction-limit calculation (max_traction_force),
-    not just CdA/drag.
+    aero_corner / aero_straight: dicts with 'CdA' (m^2) and 'ClA' (m^2).
+
+    telemetry: the same DataFrame passed into run_lap_simulation() — real
+    ground truth for what the car actually did. On a straight, speed is read
+    directly from telemetry (interpolated by absolute lap distance; see
+    real_speed_kmh() below) instead of being independently re-simulated from
+    a force-balance model. This is what makes speed impossible to overshoot:
+    it's never computed, only looked up. Deployment POWER, separately, is a
+    regulatory-max assumption, not derived from this speed (see deploy_power
+    in the drive-phase loop below). Corners don't need any of this —
+    extract_lap_segments() already builds their entry/apex/exit speeds
+    directly from telemetry.
     """
+
+    # Ground truth for a straight's speed trace — see the telemetry param
+    # note above. Raw telemetry is upsampled first (see _resample_telemetry /
+    # TELEMETRY_RESAMPLE_STEP_M) so the coarse, quantized Speed channel
+    # doesn't give the trace a stair-step character it never really had.
+    _tel_distance_m, _tel_speed_kmh = _resample_telemetry(telemetry)
+
+    def real_speed_kmh(absolute_distance_m):
+        return float(np.interp(absolute_distance_m % lap_length_m, _tel_distance_m, _tel_speed_kmh))
 
     # Typical achievable braking deceleration, computed from this lap's own
     # corners (not an arbitrary assumed G-force) — used below to cap how fast
@@ -701,6 +628,19 @@ def simulate_lap(corners_df, straights_df, mass_kg, soc_start_j,
     soc = soc_start_j
     lap_recharge_used = 0.0
     results = []
+
+    # Total electrical energy deployed this lap, capped against the same
+    # regulatory per-lap MJ figure that already bounds recharge (the FIA's
+    # "Maximum Recharge per lap" table, C5.2.10) — real per-lap electrical
+    # deployment is bounded by the same energy budget: a driver can't keep
+    # cycling the battery through more deploy/regen swings than the
+    # regulations allow it to be topped up by, lap after lap. Once hit, no
+    # more deployment happens on this or any later straight this lap — the
+    # car runs ICE-only, switching into the same superclip/ICE-only regen
+    # mode a straight enters when its own SOC threshold triggers (see
+    # lap_deploy_capped below).
+    lap_deploy_used = 0.0
+    lap_deploy_capped = False
 
     n_segments = len(corners_df)  # straights_df[i] follows corners_df[i], by construction
 
@@ -731,10 +671,11 @@ def simulate_lap(corners_df, straights_df, mass_kg, soc_start_j,
                 # No dedicated dt-stepped loop for corners (regen is a
                 # closed-form estimate, not a simulated trajectory), so this
                 # is just the entry/exit points rather than a fine trace —
-                # still enough for a continuous lap-wide speed line.
+                # still enough for a continuous lap-wide speed/SOC line.
+                # soc_j is flat here since no regen happens at all.
                 "trace": [
-                    {"distance_m": 0.0, "speed_kmh": corner["entry_speed_kmh"]},
-                    {"distance_m": corner_length_m, "speed_kmh": corner["exit_speed_kmh"]},
+                    {"distance_m": 0.0, "speed_kmh": corner["entry_speed_kmh"], "soc_j": soc},
+                    {"distance_m": corner_length_m, "speed_kmh": corner["exit_speed_kmh"], "soc_j": soc},
                 ],
             })
         else:
@@ -756,6 +697,7 @@ def simulate_lap(corners_df, straights_df, mass_kg, soc_start_j,
             )
             E_regen = max(E_regen, 0)
 
+            soc_before_corner = soc
             soc += E_regen
             lap_recharge_used += E_regen
 
@@ -770,32 +712,36 @@ def simulate_lap(corners_df, straights_df, mass_kg, soc_start_j,
                 "soc_after_j": soc,
                 "start_distance_m": corner["entry_distance_m"],
                 "length_m": corner_length_m,
+                # Regen happens over the braking zone (entry -> apex, where
+                # speed bottoms out) in one closed-form lump, not a stepped
+                # loop, so soc_j jumps from its pre-regen to post-regen value
+                # at apex and stays there through the exit point.
                 "trace": [
-                    {"distance_m": 0.0, "speed_kmh": corner["entry_speed_kmh"]},
-                    {"distance_m": apex_offset_m, "speed_kmh": corner["apex_speed_kmh"]},
-                    {"distance_m": corner_length_m, "speed_kmh": corner["exit_speed_kmh"]},
+                    {"distance_m": 0.0, "speed_kmh": corner["entry_speed_kmh"], "soc_j": soc_before_corner},
+                    {"distance_m": apex_offset_m, "speed_kmh": corner["apex_speed_kmh"], "soc_j": soc},
+                    {"distance_m": corner_length_m, "speed_kmh": corner["exit_speed_kmh"], "soc_j": soc},
                 ],
             })
 
         # --- Straight i (immediately follows corner i, by construction) ---
         straight = straights_df.iloc[i]
-        v = straight["entry_speed_kmh"] / 3.6
+        start_distance_m = straight["start_distance_m"]
         length = straight["length_m"]
         coast_length = min(straight.get("coast_length_m", 0.0), length)
         aero = aero_straight if straight["segment_type"] == "deployment_straight" else aero_corner
 
         distance_covered = 0.0
-        current_gear = initial_gear_for_speed(v)
+        v = real_speed_kmh(start_distance_m) / 3.6
 
         # Coast phase (telemetry-measured, see _measure_coast_length): the
         # real gap between the brake coming off and the driver actually
         # getting back on the throttle — a real lift-and-coast, zero
         # throttle AND zero brake. No mechanical braking or deployment here,
         # but the crankshaft is still spinning down, so lift-and-coast regen
-        # (capped at P_LIFT_COAST_MAX) still charges the battery — and the
-        # aero elements close (modeled here with aero_corner's higher CdA,
-        # since circuits.json has no dedicated "closed" profile), increasing
-        # drag beyond the straight's normal open-aero setting.
+        # (capped at P_LIFT_COAST_MAX) still charges the battery. Regen here
+        # is a flat rate regardless of speed, so — unlike the drive phase
+        # below — there's no need to derive power from real motion at all;
+        # real speed only feeds the trace/display.
         E_coast_regen = 0.0
         # Per-step (distance, speed, power) samples for the speed/deployment
         # visualization — purely observational, doesn't feed back into any
@@ -803,11 +749,8 @@ def simulate_lap(corners_df, straights_df, mass_kg, soc_start_j,
         trace = []
         trace_step = 0
         while distance_covered < coast_length and v > 0.1:
-            F_drag = 0.5 * rho * aero_corner["CdA"] * v**2
-            F_roll = CRR * mass_kg * G
-            a = (-F_drag - F_roll) / mass_kg
-            v += a * dt
             distance_covered += v * dt
+            v = real_speed_kmh(start_distance_m + distance_covered) / 3.6
 
             regen_power = max(min(
                 P_LIFT_COAST_MAX,
@@ -826,13 +769,23 @@ def simulate_lap(corners_df, straights_df, mass_kg, soc_start_j,
                     "speed_kmh": v * 3.6,
                     "deploy_power_w": 0.0,
                     "superclip_power_w": regen_power,
+                    "soc_j": soc,
                 })
 
         E_deployed = 0.0
         E_superclip_regen = 0.0
-        elapsed_time = 0.0  # reset here, not at the straight's start — the ramp-up below should begin when real acceleration begins, not when coasting does
         deploy_seconds_elapsed = 0.0  # continuous full-throttle deployment time, for the decay curve below — resets to 0 the instant deployment pauses
         coast_trigger_distance = length * (1 - LIFT_AND_COAST_FRACTION)
+        soc_superclip_trigger = battery_cap * SUPERCLIP_TRIGGER_SOC_FRACTION
+
+        # Deploy phase vs. superclip-regen phase are mutually exclusive — the
+        # motor can't motor and generate at once. Starts True (deploying)
+        # unless this lap's total deployment budget is already spent (see
+        # lap_deploy_capped) — once that happens the car stays ICE-only for
+        # every remaining straight, not just the one it happened on. Otherwise
+        # flips to False for good once SOC drops to soc_superclip_trigger (or
+        # the battery runs dry) — see SUPERCLIP_TRIGGER_SOC_FRACTION.
+        deploying = not lap_deploy_capped
 
         # Distance into this straight (from its start, same origin as
         # coast_length above) where deployment actually stops — the decay
@@ -850,49 +803,74 @@ def simulate_lap(corners_df, straights_df, mass_kg, soc_start_j,
 
         while distance_covered < length and v > 0.1:
             past_coast_trigger = lift_and_coast and distance_covered >= coast_trigger_distance
-            current_gear = next_gear(current_gear, v)
-            ramp_factor = min(elapsed_time / RAMP_UP_TIME_SEC, 1.0)
 
             if past_coast_trigger:
-                F_drive = 0.0  # throttle AND deployment both off — real lift-and-coast
-                energy_this_step = 0.0
+                energy_this_step = 0.0  # throttle AND deployment both off — real lift-and-coast
                 can_deploy = False
                 superclip_j = 0.0
-            else:
+            elif deploying:
                 can_deploy = soc > 0
 
-                # Deployment power decays 50kW for every second of continuous
-                # full-throttle deployment (350kW -> ... -> 0kW by 8s), per
-                # the FIA's published curve — rather than a flat 350kW the
-                # whole time. deploy_seconds_elapsed is reset only at the
-                # start of each straight's drive phase (a real interruption —
-                # a preceding corner or coast). It must NOT reset just
-                # because P_deploy computes to 0 within this same continuous
-                # stretch (decay bottoming out, or the battery running dry)
-                # — that was a real bug: it let the clock restart and
-                # deployment spike straight back up to 350kW moments after
-                # fully decaying, instead of staying at the floor for the
-                # rest of this straight, the way "decayed" should behave.
+                # Deployment power is the regulatory decay-curve max — 350kW
+                # decaying 50kW per second of continuous full-throttle
+                # deployment down to 0kW by 8s — not a residual computed
+                # against real motion. A real driver at full throttle deploys
+                # everything the regs and the battery allow; the real speed
+                # this produces (via real_speed_kmh() above) is a consequence
+                # of that combined ICE+MGU-K power, not a target to reverse-
+                # engineer deployment from. An earlier version derived
+                # deploy_power as required_power (from real acceleration) minus
+                # ice_power (from the real RPM via the FIA curve) — but near
+                # real cruising speed, drag rises so steeply that this residual
+                # collapses to near zero regardless of how much power actually
+                # produced that speed (that's just what a terminal-velocity
+                # plateau looks like), so lap-wide deployment came out a small
+                # fraction of what real telemetry/HUDs show. deploy_seconds_elapsed
+                # is reset only at the start of each straight's drive phase (a
+                # real interruption — a preceding corner or coast); it must NOT
+                # reset just because the battery runs dry mid-decay — that was a
+                # real bug in an earlier version: it let the clock restart and
+                # deployment spike straight back up moments after decaying,
+                # instead of staying at the floor for the rest of this straight.
                 deploy_power_cap = max(P_MGUK_MAX - DEPLOY_DECAY_RATE * deploy_seconds_elapsed, 0.0)
-                P_deploy = min(deploy_power_cap, soc / dt) if can_deploy else 0.0
+                deploy_power = max(min(
+                    deploy_power_cap,
+                    soc / dt if can_deploy else 0.0,
+                    (lap_recharge_limit - lap_deploy_used) / dt,
+                ), 0.0)
                 deploy_seconds_elapsed += dt
 
-                F_drive_uncapped = (F_ICE_at_gear(v, current_gear) + (P_deploy / v if v > 0 else 0)) * ramp_factor
+                energy_this_step = deploy_power * dt
+                lap_deploy_used += energy_this_step
+                if lap_deploy_used >= lap_recharge_limit:
+                    lap_deploy_capped = True
 
-                F_max_traction = max_traction_force(v, mass_kg, aero["ClA"], rho)
-                if F_drive_uncapped > F_max_traction and F_drive_uncapped > 0:
-                    scale = F_max_traction / F_drive_uncapped
-                    F_drive = F_max_traction
-                    energy_this_step = P_deploy * ramp_factor * scale * dt
-                else:
-                    F_drive = F_drive_uncapped
-                    energy_this_step = P_deploy * ramp_factor * dt
+                # Motor is motoring this step (drawing from the battery), not
+                # generating — deployment and superclip regen never happen in
+                # the same step, since one motor can't do both at once.
+                superclip_j = 0.0
 
-                # Superclipping: the crankshaft-connected regen system keeps
-                # charging the battery even while at full throttle and
-                # actively deploying (see the module docstring's FIA table),
-                # capped at P_SUPERCLIP_MAX — distinct from the 200kW
-                # lift-and-coast rate used for coasting and liftoff corners.
+                # Once SOC drops to the trigger fraction (or the battery
+                # would otherwise go dry, or this lap's total deployment has
+                # hit the same MJ budget that bounds recharge), this
+                # straight's deploy phase ends for good — the motor switches
+                # into superclip regen for the rest of the straight (handled
+                # by the `else` branch below on subsequent steps). Does not
+                # flip back even if superclip regen recharges SOC back above
+                # the trigger, or (for the lap-deploy-cap case) for the rest
+                # of the lap at all — see lap_deploy_capped's use below.
+                if (soc - energy_this_step) <= soc_superclip_trigger or not can_deploy or lap_deploy_capped:
+                    deploying = False
+            else:
+                # Superclip regen phase: the motor has switched from motoring
+                # to generating. ICE alone drives the car — real motion
+                # already accounts for that, nothing to compute here — while
+                # the crankshaft-connected superclip system regens up to
+                # P_SUPERCLIP_MAX, distinct from the 200kW lift-and-coast
+                # rate used for coasting and liftoff corners.
+                can_deploy = False
+                energy_this_step = 0.0
+
                 superclip_power = max(min(
                     P_SUPERCLIP_MAX,
                     (battery_cap - soc) / dt,
@@ -904,13 +882,8 @@ def simulate_lap(corners_df, straights_df, mass_kg, soc_start_j,
                 active_deploy_m = distance_covered
                 deploy_ended = True
 
-            F_drag = 0.5 * rho * aero["CdA"] * v**2
-            F_roll = CRR * mass_kg * G
-
-            a = (F_drive - F_drag - F_roll) / mass_kg
-            v += a * dt
             distance_covered += v * dt
-            elapsed_time += dt
+            v = real_speed_kmh(start_distance_m + distance_covered) / 3.6
 
             soc -= energy_this_step
             soc += superclip_j
@@ -923,11 +896,9 @@ def simulate_lap(corners_df, straights_df, mass_kg, soc_start_j,
                 trace.append({
                     "distance_m": distance_covered,
                     "speed_kmh": v * 3.6,
-                    # Energy actually delivered this step, not the raw decay
-                    # curve value — reflects ramp-up and traction-limit
-                    # scaling too, so this is what really moved the car.
                     "deploy_power_w": energy_this_step / dt,
                     "superclip_power_w": superclip_j / dt,
+                    "soc_j": soc,
                 })
 
         results.append({
@@ -938,7 +909,7 @@ def simulate_lap(corners_df, straights_df, mass_kg, soc_start_j,
             "E_coast_regen_j": E_coast_regen,
             "E_superclip_regen_j": E_superclip_regen,
             "soc_after_j": soc,
-            "start_distance_m": straight["start_distance_m"],
+            "start_distance_m": start_distance_m,
             "length_m": length,
             "coast_length_m": coast_length,
             "active_deploy_m": active_deploy_m,
@@ -949,7 +920,7 @@ def simulate_lap(corners_df, straights_df, mass_kg, soc_start_j,
 
 
 # ---------------------------------------------------------------------------
-# 8. TOP-LEVEL API — the single entry point for everything above
+# 6. TOP-LEVEL API — the single entry point for everything above
 # ---------------------------------------------------------------------------
 
 def run_lap_simulation(telemetry, circuits_data, track_key, scenario_name,
@@ -962,8 +933,12 @@ def run_lap_simulation(telemetry, circuits_data, track_key, scenario_name,
     itself.
 
     Args:
-        telemetry: DataFrame with columns Distance, Speed, Throttle, Brake
-            (from FastF1 car data, already run through .add_distance()).
+        telemetry: DataFrame with columns Distance, Speed, Throttle, Brake,
+            RPM, ElapsedSec (from FastF1 car data, already run through
+            .add_distance() — see telemetry.py's REQUIRED_COLUMNS). RPM and
+            ElapsedSec feed simulate_lap()'s real-motion-driven straight
+            processing (real RPM for ICE power, real elapsed time for real
+            acceleration) — not optional add-ons.
         circuits_data: parsed circuits.json (see load_circuits()).
         track_key: circuit key matching circuits.json, e.g. 'miami'.
         scenario_name: 'qualifying' or 'race_pace' (see SCENARIOS).
@@ -1005,6 +980,7 @@ def run_lap_simulation(telemetry, circuits_data, track_key, scenario_name,
         lap_recharge_limit=recharge_limit_j,
         lap_length_m=lap_length_m,
         lift_and_coast=scenario["lift_and_coast"],
+        telemetry=telemetry,
     )
 
     return {

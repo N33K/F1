@@ -28,6 +28,30 @@ function closeMobileMenu() {
   document.getElementById('mob-overlay')?.classList.remove('open');
 }
 
+// ── Plain-English info popovers (ⓘ next to a graph's label) ─────────────
+// Each info-icon button's next sibling is its .info-popover — toggled open
+// on click, closed on any click elsewhere (including a different ⓘ, so only
+// one is ever open at a time).
+function toggleInfoPopover(btn) {
+  const popover = btn.nextElementSibling;
+  if (!popover) return;
+  const opening = !popover.classList.contains('open');
+
+  document.querySelectorAll('.info-popover.open').forEach(p => p.classList.remove('open'));
+  document.querySelectorAll('.info-icon.open').forEach(b => b.classList.remove('open'));
+
+  if (opening) {
+    popover.classList.add('open');
+    btn.classList.add('open');
+  }
+}
+
+document.addEventListener('click', evt => {
+  if (evt.target.closest('.info-icon') || evt.target.closest('.info-popover')) return;
+  document.querySelectorAll('.info-popover.open').forEach(p => p.classList.remove('open'));
+  document.querySelectorAll('.info-icon.open').forEach(b => b.classList.remove('open'));
+});
+
 // ── Boot ──────────────────────────────────────────────────────────────
 async function init() {
   try {
@@ -96,8 +120,34 @@ async function selectCircuit(id) {
   }
 
   state.simulation = await loadSimulation(id);
+  renderTelemetryProxyBanner();
   renderSpeedPowerGraph();
   renderSocGraph();
+}
+
+// Real race telemetry doesn't exist yet for a round that hasn't happened
+// this season — /api/simulate falls back to earlier-in-the-weekend data
+// (FP1, or real Sprint session data on sprint weekends) rather than a
+// previous season's telemetry. meta.telemetry_source reports which one
+// actually powered this simulation ("race" when no fallback was needed).
+const TELEMETRY_SOURCE_LABELS = {
+  fp1:               'FP1',
+  sprint_race:       'the Sprint Race',
+  sprint_qualifying: 'Sprint Qualifying',
+};
+
+function renderTelemetryProxyBanner() {
+  const banner = document.getElementById('telemetry-proxy-banner');
+  const text   = document.getElementById('telemetry-proxy-banner-text');
+  if (!banner || !text) return;
+
+  const source = state.simulation?.meta?.telemetry_source;
+  const label  = TELEMETRY_SOURCE_LABELS[source];
+
+  if (!label) { banner.style.display = 'none'; return; }
+
+  text.textContent = `⚠ Race telemetry not published yet for this event — this preview uses ${label} data instead.`;
+  banner.style.display = 'flex';
 }
 
 // ── Lap simulation (real telemetry-driven battery model) ───────────────
@@ -141,17 +191,26 @@ function buildSimSections(data) {
     } else {
       // coastD1 marks where the telemetry-measured coast portion
       // (_measure_coast_length in energy_model.py) ends and the drive
-      // phase begins — superclipping regen runs the whole drive phase, not
-      // just up to where deployment itself stops, so it's tracked as one
-      // combined "restored" figure for the drive portion rather than
-      // trying to split it further.
+      // phase begins. The drive phase itself is deploy-then-superclip
+      // (mutually exclusive, switching once SOC hits 20% — see
+      // SUPERCLIP_TRIGGER_SOC_FRACTION in energy_model.py), tracked here as
+      // one combined "restored" figure rather than split further; the exact
+      // switch point is visible on the fine per-step SOC/speed graphs
+      // instead (see buildSimTrace).
       const coastLen = Math.min(Math.max(seg.coast_length_m || 0, 0), length);
+      // Where this straight's deploy phase actually ends and superclip
+      // regen (if triggered — see SUPERCLIP_TRIGGER_SOC_FRACTION in
+      // energy_model.py) takes over for the rest of the straight. Clamped
+      // to [coastLen, length] defensively; equals `length` on a straight
+      // where superclip never triggers.
+      const activeDeployLen = Math.min(Math.max(seg.active_deploy_m ?? length, coastLen), length);
 
       sections.push({
         type: 'straight',
         label: 'Straight',
         d0: cursor, d1: cursor + length,
         coastD1: cursor + coastLen,
+        activeDeployD1: cursor + activeDeployLen,
         soc0Mj, soc1Mj,
         restoredMj: ((seg.E_coast_regen_j ?? 0) + (seg.E_superclip_regen_j ?? 0)) / 1_000_000,
         dischargedMj: (seg.E_deployed_j ?? 0) / 1_000_000,
@@ -164,9 +223,9 @@ function buildSimSections(data) {
   return sections;
 }
 
-// Concatenates each segment's own (distance, speed, deploy power) trace —
-// corners get just their entry/apex/exit points (no dt-stepped loop to
-// sample there), straights get the finer per-step trace — into one
+// Concatenates each segment's own (distance, speed, deploy power, SOC)
+// trace — corners get just their entry/apex/exit points (no dt-stepped loop
+// to sample there), straights get the finer per-step trace — into one
 // continuous, lap-wide array, converting each segment's locally-relative
 // distance_m into the same cumulative x-axis buildSimSections uses.
 function buildSimTrace(data) {
@@ -179,6 +238,7 @@ function buildSimTrace(data) {
         d: cursor + pt.distance_m,
         speedKmh: pt.speed_kmh,
         deployKw: (pt.deploy_power_w || 0) / 1000,
+        socMj: pt.soc_j / 1_000_000,
       });
     });
     cursor += seg.length_m;
@@ -308,14 +368,16 @@ function signColor(deltaMj) {
 //   - corner  -> liftoff corners are always "liftcoast"; braking corners
 //     (or corners with no real braking/lift detected) are coloured by the
 //     sign of their actual SOC delta.
-//   - straight -> up to two runs:
-//       1. "liftcoast" for the coast portion (d0 to coastD1), regardless of
-//          how much it actually harvested.
-//       2. Everything from there to the end of the straight, coloured by
-//          the sign of restoredMj minus dischargedMj — deployment and
-//          superclipping run concurrently and superclipping doesn't stop
-//          when deployment does, so there's no clean boundary left between
-//          "deploying" and "neutral cruising".
+//   - straight -> up to three runs, split at the real physical boundaries
+//     (deploy and superclip are mutually exclusive on one motor — see
+//     SUPERCLIP_TRIGGER_SOC_FRACTION in energy_model.py — so unlike a
+//     corner's regen there's no ambiguity to resolve by net sign here):
+//       1. "liftcoast" for the coast portion (d0 to coastD1).
+//       2. "discharge" for the deploy phase (coastD1 to activeDeployD1) —
+//          always a pure drain while it's running, never mixed with regen.
+//       3. "charge" for the superclip phase (activeDeployD1 to d1), only
+//          present on straights where SOC actually dropped enough to
+//          trigger it — zero-length (and skipped) otherwise.
 function buildTimelineRuns(sim) {
   const runs = [];
 
@@ -326,13 +388,20 @@ function buildTimelineRuns(sim) {
       return;
     }
 
-    const coastLen = (sec.coastD1 ?? sec.d0) - sec.d0;
+    const coastD1 = sec.coastD1 ?? sec.d0;
+    const activeDeployD1 = sec.activeDeployD1 ?? sec.d1;
+
+    const coastLen = coastD1 - sec.d0;
     if (coastLen > 0.5) {
       runs.push({ lengthM: coastLen, colorClass: 'liftcoast' });
     }
-    const driveLen = sec.d1 - (sec.coastD1 ?? sec.d0);
-    if (driveLen > 0.5) {
-      runs.push({ lengthM: driveLen, colorClass: signColor(sec.restoredMj - sec.dischargedMj) });
+    const deployLen = activeDeployD1 - coastD1;
+    if (deployLen > 0.5) {
+      runs.push({ lengthM: deployLen, colorClass: 'discharge' });
+    }
+    const superclipLen = sec.d1 - activeDeployD1;
+    if (superclipLen > 0.5) {
+      runs.push({ lengthM: superclipLen, colorClass: 'charge' });
     }
   });
 
@@ -618,7 +687,11 @@ function tracePointAt(sim, distanceM) {
 // x axis: distance around the lap, start/finish line to start/finish line.
 // y axis: battery charge in MJ. Colour is intentionally not applied here
 // yet (see buildTimelineRuns above, kept for later use) — this is a plain
-// single-coloured line.
+// single-coloured line. Built from the fine per-step trace (see
+// buildSimTrace/tracePointAt), not the coarse per-section endpoints, so the
+// real deploy-then-superclip V-shape within a straight (drain to the 20%
+// SOC trigger, then partial recovery) is actually visible, not flattened
+// into one straight line across the whole segment.
 const SOC_GRAPH_W   = 1000;
 const SOC_GRAPH_H   = 120;
 const SOC_GRAPH_PAD = 10;
@@ -631,19 +704,16 @@ function renderSocGraph() {
   svg.innerHTML = '';
 
   const sim = state.simulation;
-  if (!sim || !sim.sections.length) {
+  if (!sim || !sim.trace || !sim.trace.length) {
     nodata.style.display = 'flex';
     return;
   }
   nodata.style.display = 'none';
 
   const maxMj      = sim.meta.battery_cap_mj || 4;
-  const lapLengthM = sim.lapLengthM || sim.sections[sim.sections.length - 1].d1;
+  const lapLengthM = sim.lapLengthM || sim.trace[sim.trace.length - 1].d;
   const toX = d   => (d / lapLengthM) * SOC_GRAPH_W;
   const toY = soc => valueToY(soc, maxMj, SOC_GRAPH_H, SOC_GRAPH_PAD);
-
-  const points = [{ d: 0, soc: sim.sections[0].soc0Mj }];
-  sim.sections.forEach(sec => points.push({ d: sec.d1, soc: sec.soc1Mj }));
 
   const ns = 'http://www.w3.org/2000/svg';
 
@@ -658,8 +728,8 @@ function renderSocGraph() {
     svg.appendChild(line);
   });
 
-  const linePoints = points.map(p => `${toX(p.d)},${toY(p.soc)}`).join(' ');
-  const fillPoints = `${toX(points[0].d)},${toY(0)} ${linePoints} ${toX(points[points.length - 1].d)},${toY(0)}`;
+  const linePoints = sim.trace.map(p => `${toX(p.d)},${toY(p.socMj)}`).join(' ');
+  const fillPoints = `${toX(sim.trace[0].d)},${toY(0)} ${linePoints} ${toX(sim.trace[sim.trace.length - 1].d)},${toY(0)}`;
 
   const fill = document.createElementNS(ns, 'polygon');
   fill.setAttribute('class', 'soc-graph-fill');
@@ -695,31 +765,31 @@ function initSocGraphHover() {
 
   svg.addEventListener('mousemove', evt => {
     const sim = state.simulation;
-    if (!sim || !sim.sections.length) return;
+    if (!sim || !sim.trace || !sim.trace.length) return;
 
     const maxMj      = sim.meta.battery_cap_mj || 4;
-    const lapLengthM = sim.lapLengthM || sim.sections[sim.sections.length - 1].d1;
+    const lapLengthM = sim.lapLengthM || sim.trace[sim.trace.length - 1].d;
 
     const rect      = svg.getBoundingClientRect();
     const xFrac     = Math.min(Math.max((evt.clientX - rect.left) / rect.width, 0), 1);
     const distanceM = xFrac * lapLengthM;
 
-    const sec  = sectionAt(sim, distanceM);
-    const span = sec.d1 - sec.d0;
-    const frac = span > 0 ? (distanceM - sec.d0) / span : 0;
-    const socMj = sec.soc0Mj + frac * (sec.soc1Mj - sec.soc0Mj);
+    const pt = tracePointAt(sim, distanceM);
+    if (!pt) return;
 
     const svgX = xFrac * SOC_GRAPH_W;
-    const svgY = valueToY(socMj, maxMj, SOC_GRAPH_H, SOC_GRAPH_PAD);
+    const svgY = valueToY(pt.socMj, maxMj, SOC_GRAPH_H, SOC_GRAPH_PAD);
 
     const cursor = document.getElementById('soc-graph-cursor');
     const dot    = document.getElementById('soc-graph-dot');
     if (cursor) { cursor.setAttribute('x1', svgX); cursor.setAttribute('x2', svgX); cursor.style.opacity = 1; }
     if (dot)    { dot.setAttribute('cx', svgX); dot.setAttribute('cy', svgY); dot.style.opacity = 1; }
 
+    const sec = sectionAt(sim, distanceM);
+    const socPct = Math.round((pt.socMj / maxMj) * 100);
     tooltip.innerHTML = `
       <div class="chart-tooltip-title">${sec.label}</div>
-      <div class="chart-tooltip-row"><span>Battery charge</span><span>${socMj.toFixed(2)} MJ</span></div>
+      <div class="chart-tooltip-row"><span>Battery</span><span>${socPct}% (${pt.socMj.toFixed(2)} MJ)</span></div>
       <div class="chart-tooltip-row"><span>Restored</span><span>+${sec.restoredMj.toFixed(3)} MJ</span></div>
       <div class="chart-tooltip-row"><span>Discharged</span><span>−${sec.dischargedMj.toFixed(3)} MJ</span></div>
     `;
@@ -774,6 +844,25 @@ function renderSpeedPowerGraph() {
   const toYPower = kw  => valueToY(kw, POWER_GRAPH_MAX_KW, POWER_GRAPH_H, POWER_GRAPH_PAD);
 
   const ns = 'http://www.w3.org/2000/svg';
+
+  // Background phase wash — at-a-glance "what's the car doing right now"
+  // colour, from buildTimelineRuns() (see there for the charge/discharge/
+  // liftcoast boundaries). Appended first so everything else draws on top;
+  // purely a background cue, doesn't replace the real speed/power lines.
+  let phaseCursor = 0;
+  buildTimelineRuns(sim).forEach(run => {
+    const d0 = phaseCursor;
+    const d1 = phaseCursor + run.lengthM;
+    phaseCursor = d1;
+
+    const band = document.createElementNS(ns, 'rect');
+    band.setAttribute('class', `speed-power-graph-phase ${run.colorClass}`);
+    band.setAttribute('x', toX(d0));
+    band.setAttribute('y', 0);
+    band.setAttribute('width', Math.max(toX(d1) - toX(d0), 0));
+    band.setAttribute('height', POWER_GRAPH_H);
+    svg.appendChild(band);
+  });
 
   // Baseline at the FIA's 350kW deployment ceiling, for scale reference
   const ceilingLine = document.createElementNS(ns, 'line');
@@ -850,7 +939,7 @@ function initSpeedPowerGraphHover() {
     tooltip.innerHTML = `
       <div class="chart-tooltip-title">${sec.label}</div>
       <div class="chart-tooltip-row"><span>Speed</span><span>${pt.speedKmh.toFixed(0)} km/h</span></div>
-      <div class="chart-tooltip-row"><span>Electrical deployment</span><span>${pt.deployKw.toFixed(0)} kW</span></div>
+      <div class="chart-tooltip-row"><span>Electric boost</span><span>${pt.deployKw.toFixed(0)} kW</span></div>
     `;
     tooltip.style.display = 'block';
     tooltip.style.left = `${evt.clientX + 16}px`;

@@ -329,6 +329,20 @@ def simulate_circuit(circuit_id: str):
         circuit_name = circuit.get("circuit"),
         allow_fastf1 = False,   # never hit the network from the server
     )
+    telemetry_source = session
+
+    # No cached race telemetry yet (e.g. the round hasn't happened this
+    # season) — fall back to real telemetry from earlier in the same race
+    # weekend, rather than a previous season's data (car/PU characteristics
+    # change too much year to year). Only applies to race simulations; a
+    # qualifying request with no cached qualifying telemetry still just 503s.
+    if telemetry is None and session == "race":
+        from telemetry import load_race_proxy_telemetry
+        telemetry, telemetry_source = load_race_proxy_telemetry(
+            circuit_id,
+            circuit_name = circuit.get("circuit"),
+            allow_fastf1 = False,
+        )
 
     if telemetry is None:
         log.info(f"No telemetry cached for {circuit_id}/{session}")
@@ -337,8 +351,9 @@ def simulate_circuit(circuit_id: str):
             "circuit_id": circuit_id,
             "session":    session,
             "message":    (
-                f"No telemetry cached for {circuit_id}/{session}. Generate it "
-                f"locally with: python backend/telemetry.py export {circuit_id}"
+                f"No telemetry cached for {circuit_id}/{session}"
+                + (" or any earlier session this weekend (FP1/sprint)" if session == "race" else "")
+                + f". Generate it locally with: python backend/telemetry.py export {circuit_id}"
             ),
         }), 503
 
@@ -358,6 +373,12 @@ def simulate_circuit(circuit_id: str):
     except Exception as e:
         log.error(f"Unexpected simulation error for {circuit_id}: {e}")
         return jsonify({"error": "internal_error", "message": str(e)}), 500
+
+    # Which session's telemetry actually powered this simulation — "race"
+    # unless the race-proxy fallback above kicked in (fp1/sprint_race/
+    # sprint_qualifying), so the frontend can flag it as an estimate rather
+    # than presenting it as real race data.
+    result["meta"]["telemetry_source"] = telemetry_source
 
     # The DataFrames are dropped here deliberately: they're a debugging
     # convenience for local work, not something the frontend needs, and

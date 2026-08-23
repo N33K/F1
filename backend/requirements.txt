@@ -2,3 +2,4 @@ flask
 pdfplumber
 numpy
 pandas
+scipy

@@ -46,13 +46,21 @@ DATA_DIR      = os.path.normpath(os.path.join(BASE_DIR, "../data"))
 TELEMETRY_DIR = os.path.join(DATA_DIR, "telemetry")
 
 # Columns energy_model.py requires. Anything else in the CSV is ignored.
-REQUIRED_COLUMNS = ["Distance", "Speed", "Throttle", "Brake"]
+# ElapsedSec (real seconds since the lap started) lets the energy model
+# derive real acceleration/duration from actual sample timing instead of
+# assuming a fixed step — telemetry's raw samples are NOT evenly spaced.
+REQUIRED_COLUMNS = ["Distance", "Speed", "Throttle", "Brake", "ElapsedSec"]
 
-# Session codes accepted by both the cache filename and FastF1.
+# Session codes accepted by both the cache filename and FastF1. Codes
+# confirmed against the installed fastf1 package's own
+# fastf1.events._SESSION_TYPE_ABBREVIATIONS.
 SESSIONS = {
-    "race":       "R",
-    "qualifying": "Q",
-    "practice":   "FP2",
+    "race":               "R",
+    "qualifying":         "Q",
+    "practice":           "FP2",
+    "fp1":                "FP1",
+    "sprint_race":        "S",
+    "sprint_qualifying":  "SQ",
 }
 
 # Reverse lookup so a FastF1-style code typed at the CLI (e.g. "R") resolves
@@ -191,13 +199,21 @@ def fastf1_available() -> bool:
 
 
 def load_from_fastf1(circuit_id: str, session: str, year: int = 2026,
-                     driver: str = "VER") -> pd.DataFrame | None:
+                     driver: str = "VER", lap_number: int | None = None) -> pd.DataFrame | None:
     """
-    Downloads the fastest lap's telemetry for a driver from FastF1.
+    Downloads one lap's telemetry for a driver from FastF1.
+
+    lap_number: a specific lap to use instead of the fastest one. Matters
+    for the race_pace scenario in energy_model.py, which assumes ~50% fuel
+    load (SCENARIOS["race_pace"]) — the fastest lap of a race is typically
+    an early, low-fuel lap, not representative of that assumption the way a
+    lap from the middle of the race is. Defaults to None (the fastest lap),
+    which is still the right choice for a quick/one-off qualifying-style
+    lookup.
 
     Returns None on any failure — missing dependency, unknown event, no data
-    published yet — so the API degrades to "no simulation available" rather
-    than returning a 500.
+    published yet, or no matching lap for this driver — so the API degrades
+    to "no simulation available" rather than returning a 500.
 
     Note: circuit_id here must be resolvable by FastF1's event lookup. It
     accepts circuit and country names, which is why the caller passes the
@@ -218,13 +234,26 @@ def load_from_fastf1(circuit_id: str, session: str, year: int = 2026,
         ses = fastf1.get_session(year, circuit_id, session_code)
         ses.load(telemetry=True, laps=True, weather=False)
 
-        lap = ses.laps.pick_drivers(driver).pick_fastest()
-        if lap is None:
-            log.error(f"No fastest lap found for {driver} at {circuit_id}")
-            return None
+        driver_laps = ses.laps.pick_drivers(driver)
+        if lap_number is not None:
+            matching = driver_laps.pick_laps(lap_number)
+            lap = matching.iloc[0] if len(matching) else None
+            if lap is None:
+                log.error(f"No lap {lap_number} found for {driver} at {circuit_id}")
+                return None
+        else:
+            lap = driver_laps.pick_fastest()
+            if lap is None:
+                log.error(f"No fastest lap found for {driver} at {circuit_id}")
+                return None
 
         tel = lap.get_car_data().add_distance()
         df  = tel[["Distance", "Speed", "Throttle", "Brake", "RPM", "nGear"]].copy()
+        # Real seconds since the lap started — telemetry's own Time column
+        # (a timedelta), converted to a plain float so it round-trips
+        # through CSV. Real samples aren't evenly spaced; the energy model
+        # needs the actual per-sample dt, not an assumed fixed one.
+        df["ElapsedSec"] = (tel["Time"] - tel["Time"].iloc[0]).dt.total_seconds()
 
         log.info(f"Fetched {len(df)} telemetry rows from FastF1 for {circuit_id}")
         return df
@@ -265,16 +294,60 @@ def load_telemetry(circuit_id: str, session: str = "race",
     return load_from_fastf1(circuit_name or circuit_id, session)
 
 
+# ── Race-proxy fallback (future/unraced events) ─────────────────────────────
+#
+# For a round that hasn't been run yet this season, there's no race telemetry
+# to cache. Rather than falling back to a previous season (car/PU
+# characteristics change too much year to year), we use telemetry from
+# earlier in the SAME weekend instead: on a sprint weekend, the actual Sprint
+# Race (or Sprint Qualifying) is genuine competitive racing data and a much
+# better stand-in for race pace than a practice run; FP1 is the universal
+# last resort since it's the one session every weekend runs before anything
+# else. This only ever applies to `session="race"` simulation requests — see
+# app.py's /api/simulate route.
+
+def race_proxy_session_order(circuit_id: str) -> list[str]:
+    """
+    Ordered list of session keys to try, in preference order, as a stand-in
+    for real race telemetry that doesn't exist yet for this circuit. Sprint
+    weekends try real sprint session data first; every weekend falls back to
+    FP1 last.
+    """
+    circuits = _load_circuits_json()
+    circuit = circuits.get("circuits", {}).get(resolve_circuit_id(circuit_id), {})
+    has_sprint = circuit.get("has_sprint", False)
+
+    order = ["sprint_race", "sprint_qualifying"] if has_sprint else []
+    order.append("fp1")
+    return order
+
+
+def load_race_proxy_telemetry(circuit_id: str, circuit_name: str | None = None,
+                              allow_fastf1: bool = False) -> tuple[pd.DataFrame | None, str | None]:
+    """
+    Tries each session in race_proxy_session_order() in turn via the normal
+    load_telemetry() path, returning the first one found. Returns
+    (dataframe, session_used), or (None, None) if nothing is available
+    anywhere yet (e.g. the weekend hasn't started).
+    """
+    for session in race_proxy_session_order(circuit_id):
+        df = load_telemetry(circuit_id, session, circuit_name, allow_fastf1)
+        if df is not None:
+            return df, session
+    return None, None
+
+
 # ── Cache generation (run locally) ───────────────────────────────────────────
 
 def export_telemetry_csv(circuit_id: str, session: str = "race",
                          year: int = 2026, driver: str = "VER",
-                         circuit_name: str | None = None) -> bool:
+                         circuit_name: str | None = None,
+                         lap_number: int | None = None) -> bool:
     """
     Downloads telemetry via FastF1 and writes it to the cache directory so it
     can be committed. Run this locally, never on the server.
     """
-    df = load_from_fastf1(circuit_name or circuit_id, session, year, driver)
+    df = load_from_fastf1(circuit_name or circuit_id, session, year, driver, lap_number)
     if df is None:
         return False
 
@@ -294,7 +367,7 @@ if __name__ == "__main__":
     import sys
 
     # Usage:
-    #   python backend/telemetry.py export miami 2026 R VER
+    #   python backend/telemetry.py export miami 2026 R VER 35
     #   python backend/telemetry.py check  miami race
     if len(sys.argv) < 3:
         print(__doc__)
@@ -304,10 +377,11 @@ if __name__ == "__main__":
     circuit_id = sys.argv[2]
 
     if command == "export":
-        year    = int(sys.argv[3]) if len(sys.argv) > 3 else 2026
-        session = normalize_session(sys.argv[4]) if len(sys.argv) > 4 else "race"
-        driver  = sys.argv[5] if len(sys.argv) > 5 else "VER"
-        ok = export_telemetry_csv(circuit_id, session, year, driver)
+        year       = int(sys.argv[3]) if len(sys.argv) > 3 else 2026
+        session    = normalize_session(sys.argv[4]) if len(sys.argv) > 4 else "race"
+        driver     = sys.argv[5] if len(sys.argv) > 5 else "VER"
+        lap_number = int(sys.argv[6]) if len(sys.argv) > 6 else None
+        ok = export_telemetry_csv(circuit_id, session, year, driver, lap_number=lap_number)
         sys.exit(0 if ok else 1)
 
     elif command == "check":

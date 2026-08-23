@@ -84,19 +84,32 @@
         </div>
 
         <div class="phase-panel">
-          <div class="phase-panel-label">SPEED &amp; ELECTRICAL DEPLOYMENT — WHERE ENERGY LIMITS COST SPEED</div>
+          <div class="phase-panel-label">
+            SPEED &amp; ELECTRIC BOOST — WHY THE CAR SLOWS DOWN
+            <button class="info-icon" type="button" aria-label="What does this graph show?" onclick="toggleInfoPopover(this)">ⓘ</button>
+            <div class="info-popover">This car has an electric motor that gives it a 350kW power boost — like a nitro button. But the boost runs out after a few seconds, and the car has to keep going on its regular engine alone. That drop-off is why a chasing car can suddenly close the gap on a long straight.</div>
+          </div>
           <div class="speed-power-graph-wrap" id="speed-power-graph-wrap">
             <svg class="speed-power-graph" id="speed-power-graph" viewBox="0 0 1000 240" preserveAspectRatio="none"></svg>
             <div class="speed-power-graph-nodata" id="speed-power-graph-nodata" style="display:none">No data found</div>
           </div>
           <div class="phase-legend">
             <span><span class="dot" style="background:var(--teal)"></span>Speed</span>
-            <span><span class="dot" style="background:var(--orange)"></span>Electrical deployment power</span>
+            <span><span class="dot" style="background:var(--orange)"></span>Boost power (kW)</span>
+          </div>
+          <div class="phase-legend">
+            <span><span class="dot discharge"></span>Boosting</span>
+            <span><span class="dot charge"></span>Recharging</span>
+            <span><span class="dot liftcoast"></span>Coasting</span>
           </div>
         </div>
 
         <div class="phase-panel">
-          <div class="phase-panel-label">BATTERY STATE OF CHARGE</div>
+          <div class="phase-panel-label">
+            BATTERY
+            <button class="info-icon" type="button" aria-label="What does this graph show?" onclick="toggleInfoPopover(this)">ⓘ</button>
+            <div class="info-popover">Think of this like a phone battery — except it drains and recharges <em>during</em> the lap. Flooring the throttle drains it for an extra speed boost; braking and lifting off the throttle recharges it.</div>
+          </div>
           <div class="soc-graph-wrap soc-graph-wrap--secondary" id="soc-graph-wrap">
             <svg class="soc-graph" id="soc-graph" viewBox="0 0 1000 120" preserveAspectRatio="none"></svg>
             <div class="soc-graph-nodata" id="soc-graph-nodata" style="display:none">No data found</div>
@@ -108,6 +121,10 @@
         <div class="no-data-banner" id="no-data-banner" style="display:none">
           <span>⚠ No official data fetched for this circuit yet.</span>
           <button onclick="fetchCircuitData()">Fetch from FIA now</button>
+        </div>
+
+        <div class="no-data-banner" id="telemetry-proxy-banner" style="display:none">
+          <span id="telemetry-proxy-banner-text"></span>
         </div>
 
         <div class="metrics-row" id="metrics-row"></div>
