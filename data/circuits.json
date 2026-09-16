@@ -32,7 +32,8 @@
       "race_laps": 56,
       "energy_type": "balanced",
       "svg_file" : "shanghai-1.svg",
-      "downforce_level" : "medium_downforce"
+      "downforce_level" : "medium_downforce",
+      "has_sprint": true
     },
     "japan": {
       "name": "Japanese Grand Prix",
@@ -81,6 +82,7 @@
       "energy_type": "balanced",
       "svg_file" : "miami-1.svg",
       "downforce_level" : "medium_downforce",
+      "has_sprint": true,
       "svg_direction_reversed": true
     },
     "canada": {
@@ -94,6 +96,7 @@
       "energy_type": "balanced",
       "svg_file" : "montreal-6.svg",
       "downforce_level" : "medium_downforce",
+      "has_sprint": true,
       "svg_direction_reversed": true
     },
     "monaco": {
@@ -144,7 +147,8 @@
       "race_laps": 52,
       "energy_type": "balanced",
       "svg_file" : "silverstone-8.svg",
-      "downforce_level" : "medium_downforce"
+      "downforce_level" : "medium_downforce",
+      "has_sprint": true
     },
     "belgium": {
       "name": "Belgian Grand Prix",
@@ -180,7 +184,8 @@
       "race_laps": 72,
       "energy_type": "balanced",
       "svg_file" : "zandvoort-5.svg",
-      "downforce_level" : "medium_downforce"
+      "downforce_level" : "medium_downforce",
+      "has_sprint": true
     },
     "italy": {
       "name": "Italian Grand Prix",
@@ -228,7 +233,8 @@
       "race_laps": 62,
       "energy_type": "rich",
       "svg_file" : "marina-bay-4.svg",
-      "downforce_level" : "high_downforce"
+      "downforce_level" : "high_downforce",
+      "has_sprint": true
     },
     "usa": {
       "name": "United States Grand Prix",
@@ -339,7 +345,6 @@
     "circuit de monaco":        "monaco",
 
     "barcelona":                "spain",
-    "spanish":                  "spain",
     "catalunya":                "spain",
     "barcelona-catalunya":      "spain",
     "barcelona-catalunya grand prix": "spain",
@@ -371,6 +376,7 @@
     "autodromo di monza":       "italy",
 
     "madrid":                   "madrid",
+    "spanish":                  "madrid",
     "jarama":                   "madrid",
     "circuito de madrid":       "madrid",
 

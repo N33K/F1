@@ -3,9 +3,7 @@ context/
 *.context.md
 CLAUDE.local.md
 .claude/
-data/PROJECT_CONTEXT.md
-data/SESSION_CONTEXT.md
-data/Simulation engine clarification and purpose.md
+*.md
 
 # Python
 __pycache__/

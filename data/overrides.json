@@ -12,6 +12,34 @@
         "qualifying": 7.0,
         "free_practice": 8.5,
         "out_laps": 8.5
+      },
+      "power_reduction": {
+        "power_limited_distance_m": 3518.0,
+        "rate_limit_kw_per_s": 50.0
+      },
+      "sectors": {
+        "greater_reduction": [
+          {
+            "label": "T11-T13",
+            "start_m": 4100.0,
+            "end_m": 4550.0,
+            "quali_only": false,
+            "max_reduction_kw": 350.0
+          }
+        ],
+        "power_reduction_reset": [
+          {
+            "label": "Exit T5",
+            "start_m": 1450.0,
+            "end_m": 1600.0,
+            "quali_only": false
+          }
+        ]
+      },
+      "overtake": {
+        "detection_gap_s": 1.0,
+        "detection_line_m": 4650.0,
+        "activation_line_m": 4713.0
       }
     },
     {
@@ -26,6 +54,63 @@
         "qualifying": 6.0,
         "free_practice": 8.5,
         "out_laps": 8.5
+      },
+      "power_reduction": {
+        "power_limited_distance_m": 2923.0,
+        "rate_limit_kw_per_s": 100.0
+      },
+      "sectors": {
+        "alt_power_curve": [
+          {
+            "label": "T4-T7",
+            "start_m": 2170.0,
+            "end_m": 2960.0,
+            "quali_only": false
+          },
+          {
+            "label": "T9-T10",
+            "start_m": 3720.0,
+            "end_m": 3920.0,
+            "quali_only": false
+          }
+        ],
+        "greater_reduction": [
+          {
+            "label": "T6-T7",
+            "start_m": 2700.0,
+            "end_m": 3000.0,
+            "quali_only": false,
+            "max_reduction_kw": 350.0
+          },
+          {
+            "label": "T9-T10",
+            "start_m": 3750.0,
+            "end_m": 3900.0,
+            "quali_only": false,
+            "max_reduction_kw": 350.0
+          },
+          {
+            "label": "Exit T10",
+            "start_m": 3950.0,
+            "end_m": 4150.0,
+            "quali_only": true,
+            "max_reduction_kw": 350.0
+          }
+        ],
+        "power_reduction_reset": [
+          {
+            "label": "Exit T10",
+            "start_m": 4100.0,
+            "end_m": 4400.0,
+            "quali_only": true
+          }
+        ],
+        "higher_speed_threshold": []
+      },
+      "overtake": {
+        "detection_gap_s": 1.0,
+        "detection_line_m": 3936.0,
+        "activation_line_m": 4088.0
       }
     },
     {
@@ -40,6 +125,103 @@
         "qualifying": 7.0,
         "free_practice": 9.0,
         "out_laps": 9.0
+      },
+      "power_reduction": {
+        "power_limited_distance_m": 4594.0,
+        "rate_limit_kw_per_s": 50.0
+      },
+      "sectors": {
+        "alt_power_curve": [
+          {
+            "label": "T5-T14",
+            "start_m": 2400.0,
+            "end_m": 4900.0,
+            "quali_only": false
+          }
+        ],
+        "greater_reduction": [
+          {
+            "label": "T5-T9",
+            "start_m": 2350.0,
+            "end_m": 3250.0,
+            "quali_only": false,
+            "max_reduction_kw": 350.0
+          },
+          {
+            "label": "T10-T11",
+            "start_m": 3750.0,
+            "end_m": 4000.0,
+            "quali_only": false,
+            "max_reduction_kw": 350.0
+          },
+          {
+            "label": "T12-T14",
+            "start_m": 4450.0,
+            "end_m": 4850.0,
+            "quali_only": false,
+            "max_reduction_kw": 350.0
+          },
+          {
+            "label": "Exit T19",
+            "start_m": 6730.0,
+            "end_m": 6900.0,
+            "quali_only": true,
+            "max_reduction_kw": 350.0
+          }
+        ],
+        "power_reduction_reset": [
+          {
+            "label": "Exit T3",
+            "start_m": 1150.0,
+            "end_m": 1400.0,
+            "quali_only": false
+          },
+          {
+            "label": "Exit T7",
+            "start_m": 2650.0,
+            "end_m": 2750.0,
+            "quali_only": false
+          },
+          {
+            "label": "Exit T10",
+            "start_m": 3800.0,
+            "end_m": 4000.0,
+            "quali_only": false
+          },
+          {
+            "label": "Exit T17",
+            "start_m": 6150.0,
+            "end_m": 6350.0,
+            "quali_only": false
+          },
+          {
+            "label": "Exit T19",
+            "start_m": 6800.0,
+            "end_m": 7000.0,
+            "quali_only": true
+          }
+        ],
+        "higher_speed_threshold": [
+          {
+            "label": "T6-Exit T7",
+            "start_m": 2500.0,
+            "end_m": 2680.0,
+            "quali_only": false,
+            "speed_threshold_kmh": 240.0
+          },
+          {
+            "label": "T12-T13",
+            "start_m": 4450.0,
+            "end_m": 4650.0,
+            "quali_only": false,
+            "speed_threshold_kmh": 240.0
+          }
+        ]
+      },
+      "overtake": {
+        "detection_gap_s": 1.0,
+        "detection_line_m": 6745.0,
+        "activation_line_m": 6885.0
       }
     },
     {
@@ -54,6 +236,50 @@
         "qualifying": 6.0,
         "free_practice": 8.5,
         "out_laps": 8.5
+      },
+      "power_reduction": {
+        "power_limited_distance_m": 2682.0,
+        "rate_limit_kw_per_s": 100.0
+      },
+      "sectors": {
+        "alt_power_curve": [
+          {
+            "label": "T1-T6",
+            "start_m": 220.0,
+            "end_m": 1200.0,
+            "quali_only": false
+          }
+        ],
+        "greater_reduction": [
+          {
+            "label": "T5-T6",
+            "start_m": 980.0,
+            "end_m": 1100.0,
+            "quali_only": false,
+            "max_reduction_kw": 350.0
+          },
+          {
+            "label": "T13-Exit T14",
+            "start_m": 3850.0,
+            "end_m": 4050.0,
+            "quali_only": true,
+            "max_reduction_kw": 350.0
+          }
+        ],
+        "power_reduction_reset": [
+          {
+            "label": "Exit T14",
+            "start_m": 4000.0,
+            "end_m": 4400.0,
+            "quali_only": true
+          }
+        ],
+        "higher_speed_threshold": []
+      },
+      "overtake": {
+        "detection_gap_s": 1.0,
+        "detection_line_m": 3870.0,
+        "activation_line_m": 3982.0
       }
     },
     {
@@ -68,6 +294,34 @@
         "qualifying": 9.0,
         "free_practice": 9.0,
         "out_laps": 9.0
+      },
+      "power_reduction": {
+        "power_limited_distance_m": 3125.0,
+        "rate_limit_kw_per_s": 100.0
+      },
+      "sectors": {
+        "greater_reduction": [
+          {
+            "label": "T7-T9",
+            "start_m": 1950.0,
+            "end_m": 2500.0,
+            "quali_only": false,
+            "max_reduction_kw": 350.0
+          },
+          {
+            "label": "T11-T12",
+            "start_m": 3100.0,
+            "end_m": 3200.0,
+            "quali_only": false,
+            "max_reduction_kw": 350.0
+          }
+        ],
+        "power_reduction_reset": []
+      },
+      "overtake": {
+        "detection_gap_s": 1.0,
+        "detection_line_m": 5130.0,
+        "activation_line_m": 5250.0
       }
     },
     {
@@ -82,6 +336,97 @@
         "qualifying": 6.5,
         "free_practice": 8.5,
         "out_laps": 8.5
+      },
+      "power_reduction": {
+        "power_limited_distance_m": 3833.0,
+        "rate_limit_kw_per_s": 50.0
+      },
+      "sectors": {
+        "alt_power_curve": [
+          {
+            "label": "T1-T4",
+            "start_m": 350.0,
+            "end_m": 1000.0,
+            "quali_only": false
+          },
+          {
+            "label": "T15-T16",
+            "start_m": 4950.0,
+            "end_m": 5450.0,
+            "quali_only": false
+          }
+        ],
+        "greater_reduction": [
+          {
+            "label": "T1-T4",
+            "start_m": 350.0,
+            "end_m": 1000.0,
+            "quali_only": false,
+            "max_reduction_kw": 350.0
+          },
+          {
+            "label": "T6-T7",
+            "start_m": 1950.0,
+            "end_m": 2100.0,
+            "quali_only": false,
+            "max_reduction_kw": 350.0
+          },
+          {
+            "label": "T15-T16",
+            "start_m": 4950.0,
+            "end_m": 5200.0,
+            "quali_only": false,
+            "max_reduction_kw": 350.0
+          },
+          {
+            "label": "Exit T17",
+            "start_m": 5550.0,
+            "end_m": 5750.0,
+            "quali_only": true,
+            "max_reduction_kw": 350.0
+          }
+        ],
+        "power_reduction_reset": [
+          {
+            "label": "Exit T1",
+            "start_m": 400.0,
+            "end_m": 550.0,
+            "quali_only": false
+          },
+          {
+            "label": "Exit T9",
+            "start_m": 3000.0,
+            "end_m": 3300.0,
+            "quali_only": false
+          },
+          {
+            "label": "Exit T17-T18",
+            "start_m": 5650.0,
+            "end_m": 5900.0,
+            "quali_only": true
+          }
+        ],
+        "higher_speed_threshold": [
+          {
+            "label": "T11-T14",
+            "start_m": 3700.0,
+            "end_m": 4150.0,
+            "quali_only": false,
+            "speed_threshold_kmh": 300.0
+          },
+          {
+            "label": "T18",
+            "start_m": 5600.0,
+            "end_m": 5800.0,
+            "quali_only": false,
+            "speed_threshold_kmh": 230.0
+          }
+        ]
+      },
+      "overtake": {
+        "detection_gap_s": 1.0,
+        "detection_line_m": 5560.0,
+        "activation_line_m": 5631.0
       }
     },
     {
@@ -96,6 +441,136 @@
         "qualifying": 9.0,
         "free_practice": 9.0,
         "out_laps": 9.0
+      },
+      "power_reduction": {
+        "power_limited_distance_m": 1885.0,
+        "rate_limit_kw_per_s": 100.0
+      },
+      "sectors": {
+        "alt_power_curve": [
+          {
+            "label": "T4-T9",
+            "start_m": 1780.0,
+            "end_m": 2700.0,
+            "quali_only": false
+          },
+          {
+            "label": "T12-T14",
+            "start_m": 3500.0,
+            "end_m": 4000.0,
+            "quali_only": false
+          }
+        ],
+        "greater_reduction": [
+          {
+            "label": "T4-T5",
+            "start_m": 1780.0,
+            "end_m": 2000.0,
+            "quali_only": false,
+            "max_reduction_kw": 350.0
+          },
+          {
+            "label": "T8-T9",
+            "start_m": 2570.0,
+            "end_m": 2700.0,
+            "quali_only": false,
+            "max_reduction_kw": 350.0
+          },
+          {
+            "label": "T12-T14",
+            "start_m": 3500.0,
+            "end_m": 4000.0,
+            "quali_only": false,
+            "max_reduction_kw": 350.0
+          },
+          {
+            "label": "Exit T14",
+            "start_m": 4000.0,
+            "end_m": 4200.0,
+            "quali_only": true,
+            "max_reduction_kw": 350.0
+          }
+        ],
+        "power_reduction_reset": [
+          {
+            "label": "Exit T14",
+            "start_m": 4150.0,
+            "end_m": 4400.0,
+            "quali_only": true
+          }
+        ],
+        "higher_speed_threshold": [
+          {
+            "label": "T2-Exit T3",
+            "start_m": 1150.0,
+            "end_m": 1400.0,
+            "quali_only": false,
+            "speed_threshold_kmh": 240.0
+          }
+        ]
+      },
+      "overtake": {
+        "detection_gap_s": 1.0,
+        "detection_line_m": 3974.0,
+        "activation_line_m": 4121.0
+      }
+    },
+    {
+      "event": "italy",
+      "source_url": "https://www.fia.com/system/files/decision-document/2026_italian_grand_prix_-_power_unit_information.pdf",
+      "extracted_at": "2026-09-14T20:15:57.844304",
+      "limits": {
+        "race": {
+          "overtake_inactive": 7.0,
+          "overtake_active": 7.5
+        },
+        "qualifying": 5.0,
+        "free_practice": 7.5,
+        "out_laps": 9.0
+      },
+      "power_reduction": {
+        "power_limited_distance_m": 4218.0,
+        "rate_limit_kw_per_s": 50.0
+      },
+      "sectors": {
+        "alt_power_curve": [
+          {
+            "label": "T4-T7",
+            "start_m": 2100.0,
+            "end_m": 2800.0,
+            "quali_only": false
+          }
+        ],
+        "greater_reduction": [
+          {
+            "label": "T4-T7",
+            "start_m": 2100.0,
+            "end_m": 2800.0,
+            "quali_only": false,
+            "max_reduction_kw": 350.0
+          },
+          {
+            "label": "Exit T11",
+            "start_m": 5050.0,
+            "end_m": 5350.0,
+            "quali_only": true,
+            "max_reduction_kw": 350.0
+          }
+        ],
+        "power_reduction_reset": [
+          {
+            "label": "Exit T11",
+            "start_m": 5300.0,
+            "end_m": 5800.0,
+            "quali_only": true
+          }
+        ],
+        "higher_speed_threshold": []
+      },
+      "overtake": {
+        "detection_gap_s": 1.0,
+        "detection_line_m": 5050.0,
+        "activation_line_m": 5249.0
       }
     },
     {
@@ -110,6 +585,111 @@
         "qualifying": 8.0,
         "free_practice": 9.0,
         "out_laps": 9.0
+      },
+      "power_reduction": {
+        "power_limited_distance_m": 3472.0,
+        "rate_limit_kw_per_s": 100.0
+      },
+      "sectors": {
+        "greater_reduction": [
+          {
+            "label": "T3-T6",
+            "start_m": 1100.0,
+            "end_m": 1500.0,
+            "quali_only": false,
+            "max_reduction_kw": 350.0
+          },
+          {
+            "label": "T8-T9",
+            "start_m": 2270.0,
+            "end_m": 2400.0,
+            "quali_only": false,
+            "max_reduction_kw": 350.0
+          },
+          {
+            "label": "T13-T14",
+            "start_m": 3800.0,
+            "end_m": 3920.0,
+            "quali_only": false,
+            "max_reduction_kw": 350.0
+          }
+        ],
+        "power_reduction_reset": []
+      },
+      "overtake": {
+        "detection_gap_s": 1.0,
+        "detection_line_m": 5480.0,
+        "activation_line_m": 5562.0
+      }
+    },
+    {
+      "event": "madrid",
+      "source_url": "https://www.fia.com/system/files/decision-document/2026_spanish_grand_prix_-_power_unit_information.pdf",
+      "extracted_at": "2026-09-14T20:16:06.441289",
+      "limits": {
+        "race": {
+          "overtake_inactive": 8.5,
+          "overtake_active": 9.0
+        },
+        "qualifying": 7.5,
+        "free_practice": 9.0,
+        "out_laps": 9.0
+      },
+      "power_reduction": {
+        "power_limited_distance_m": 3206.0,
+        "rate_limit_kw_per_s": 100.0
+      },
+      "sectors": {
+        "alt_power_curve": [
+          {
+            "label": "T5-T22",
+            "start_m": 1500.0,
+            "end_m": 5100.0,
+            "quali_only": false
+          }
+        ],
+        "greater_reduction": [
+          {
+            "label": "T15-T16",
+            "start_m": 3600.0,
+            "end_m": 3800.0,
+            "quali_only": false,
+            "max_reduction_kw": 350.0
+          },
+          {
+            "label": "T18-T19",
+            "start_m": 4100.0,
+            "end_m": 4300.0,
+            "quali_only": false,
+            "max_reduction_kw": 350.0
+          },
+          {
+            "label": "T20-T21",
+            "start_m": 4600.0,
+            "end_m": 4800.0,
+            "quali_only": false,
+            "max_reduction_kw": 350.0
+          },
+          {
+            "label": "Exit T22",
+            "start_m": 5100.0,
+            "end_m": 5300.0,
+            "quali_only": true,
+            "max_reduction_kw": 350.0
+          }
+        ],
+        "power_reduction_reset": [
+          {
+            "label": "Exit T22",
+            "start_m": 5200.0,
+            "end_m": 5400.0,
+            "quali_only": true
+          }
+        ],
+        "higher_speed_threshold": []
+      },
+      "overtake": {
+        "detection_gap_s": 1.0
       }
     },
     {
@@ -124,6 +704,78 @@
         "qualifying": 8.0,
         "free_practice": 9.0,
         "out_laps": 9.0
+      },
+      "power_reduction": {
+        "power_limited_distance_m": 3346.0,
+        "rate_limit_kw_per_s": 100.0
+      },
+      "sectors": {
+        "alt_power_curve": [
+          {
+            "label": "T1-T8",
+            "start_m": 370.0,
+            "end_m": 1550.0,
+            "quali_only": false
+          },
+          {
+            "label": "T11-T16",
+            "start_m": 3100.0,
+            "end_m": 3520.0,
+            "quali_only": false
+          }
+        ],
+        "greater_reduction": [
+          {
+            "label": "T4-T8",
+            "start_m": 1140.0,
+            "end_m": 1600.0,
+            "quali_only": false,
+            "max_reduction_kw": 350.0
+          },
+          {
+            "label": "T11-T16",
+            "start_m": 3100.0,
+            "end_m": 3520.0,
+            "quali_only": false,
+            "max_reduction_kw": 350.0
+          },
+          {
+            "label": "T17-T19",
+            "start_m": 4800.0,
+            "end_m": 5200.0,
+            "quali_only": true,
+            "max_reduction_kw": 350.0
+          }
+        ],
+        "power_reduction_reset": [
+          {
+            "label": "Exit T18",
+            "start_m": 5000.0,
+            "end_m": 5500.0,
+            "quali_only": true
+          }
+        ],
+        "higher_speed_threshold": [
+          {
+            "label": "T1-T3",
+            "start_m": 370.0,
+            "end_m": 650.0,
+            "quali_only": false,
+            "speed_threshold_kmh": 240.0
+          },
+          {
+            "label": "T5-T8",
+            "start_m": 1250.0,
+            "end_m": 1550.0,
+            "quali_only": false,
+            "speed_threshold_kmh": 240.0
+          }
+        ]
+      },
+      "overtake": {
+        "detection_gap_s": 1.0,
+        "detection_line_m": 4908.0,
+        "activation_line_m": 5057.0
       }
     },
     {
@@ -138,6 +790,36 @@
         "qualifying": 9.0,
         "free_practice": 9.0,
         "out_laps": 9.0
+      },
+      "power_reduction": {
+        "power_limited_distance_m": 1388.0,
+        "rate_limit_kw_per_s": 100.0
+      },
+      "sectors": {
+        "alt_power_curve": [],
+        "greater_reduction": [
+          {
+            "label": "Exit T19",
+            "start_m": 2980.0,
+            "end_m": 3200.0,
+            "quali_only": true,
+            "max_reduction_kw": 350.0
+          }
+        ],
+        "power_reduction_reset": [
+          {
+            "label": "Exit T19",
+            "start_m": 3070.0,
+            "end_m": 3400.0,
+            "quali_only": true
+          }
+        ],
+        "higher_speed_threshold": []
+      },
+      "overtake": {
+        "detection_gap_s": 1.0,
+        "detection_line_m": 2805.0,
+        "activation_line_m": 2950.0
       }
     },
     {
@@ -152,6 +834,69 @@
         "qualifying": 7.5,
         "free_practice": 9.0,
         "out_laps": 9.0
+      },
+      "power_reduction": {
+        "power_limited_distance_m": 2411.0,
+        "rate_limit_kw_per_s": 100.0
+      },
+      "sectors": {
+        "alt_power_curve": [
+          {
+            "label": "T1-T3",
+            "start_m": 350.0,
+            "end_m": 800.0,
+            "quali_only": false
+          },
+          {
+            "label": "T8-T10",
+            "start_m": 2000.0,
+            "end_m": 2450.0,
+            "quali_only": false
+          },
+          {
+            "label": "T11-T13",
+            "start_m": 3100.0,
+            "end_m": 3400.0,
+            "quali_only": false
+          }
+        ],
+        "greater_reduction": [
+          {
+            "label": "T2-T3",
+            "start_m": 670.0,
+            "end_m": 800.0,
+            "quali_only": false,
+            "max_reduction_kw": 350.0
+          },
+          {
+            "label": "T8-T10",
+            "start_m": 2000.0,
+            "end_m": 2450.0,
+            "quali_only": false,
+            "max_reduction_kw": 350.0
+          },
+          {
+            "label": "Exit T13",
+            "start_m": 3450.0,
+            "end_m": 3650.0,
+            "quali_only": true,
+            "max_reduction_kw": 350.0
+          }
+        ],
+        "power_reduction_reset": [
+          {
+            "label": "Exit T14",
+            "start_m": 3700.0,
+            "end_m": 4200.0,
+            "quali_only": true
+          }
+        ],
+        "higher_speed_threshold": []
+      },
+      "overtake": {
+        "detection_gap_s": 1.0,
+        "detection_line_m": 3431.0,
+        "activation_line_m": 3648.0
       }
     },
     {
@@ -166,6 +911,110 @@
         "qualifying": 7.0,
         "free_practice": 9.0,
         "out_laps": 9.0
+      },
+      "power_reduction": {
+        "power_limited_distance_m": 2440.0,
+        "rate_limit_kw_per_s": 100.0
+      },
+      "sectors": {
+        "alt_power_curve": [
+          {
+            "label": "T1-T5",
+            "start_m": 820.0,
+            "end_m": 2100.0,
+            "quali_only": false
+          },
+          {
+            "label": "T7-T9",
+            "start_m": 2520.0,
+            "end_m": 2850.0,
+            "quali_only": false
+          },
+          {
+            "label": "T10-T12",
+            "start_m": 3480.0,
+            "end_m": 3750.0,
+            "quali_only": false
+          }
+        ],
+        "greater_reduction": [
+          {
+            "label": "T1-T2",
+            "start_m": 850.0,
+            "end_m": 930.0,
+            "quali_only": false,
+            "max_reduction_kw": 350.0
+          },
+          {
+            "label": "T10-T12",
+            "start_m": 3500.0,
+            "end_m": 3750.0,
+            "quali_only": false,
+            "max_reduction_kw": 350.0
+          },
+          {
+            "label": "T13-T14",
+            "start_m": 4000.0,
+            "end_m": 4150.0,
+            "quali_only": false,
+            "max_reduction_kw": 350.0
+          },
+          {
+            "label": "T12-Exit T14",
+            "start_m": 3750.0,
+            "end_m": 4500.0,
+            "quali_only": true,
+            "max_reduction_kw": 350.0
+          }
+        ],
+        "power_reduction_reset": [
+          {
+            "label": "Exit T3",
+            "start_m": 1150.0,
+            "end_m": 1400.0,
+            "quali_only": false
+          },
+          {
+            "label": "Exit T9",
+            "start_m": 2850.0,
+            "end_m": 3050.0,
+            "quali_only": false
+          },
+          {
+            "label": "Exit T14",
+            "start_m": 4300.0,
+            "end_m": 4700.0,
+            "quali_only": false
+          }
+        ],
+        "higher_speed_threshold": [
+          {
+            "label": "T2-T3",
+            "start_m": 1000.0,
+            "end_m": 1200.0,
+            "quali_only": false,
+            "speed_threshold_kmh": 260.0
+          },
+          {
+            "label": "T9",
+            "start_m": 2800.0,
+            "end_m": 2950.0,
+            "quali_only": false,
+            "speed_threshold_kmh": 260.0
+          },
+          {
+            "label": "T13",
+            "start_m": 3980.0,
+            "end_m": 4100.0,
+            "quali_only": false,
+            "speed_threshold_kmh": 260.0
+          }
+        ]
+      },
+      "overtake": {
+        "detection_gap_s": 1.0,
+        "detection_line_m": 4047.0,
+        "activation_line_m": 4271.0
       }
     }
   ]
