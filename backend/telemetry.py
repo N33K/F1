@@ -115,6 +115,68 @@ def _alias_candidates(canonical_id: str) -> list[str]:
     return [alias for alias, cid in aliases.items() if cid == canonical_id]
 
 
+def _normalize(text: str) -> str:
+    """Lowercase, strip accents and punctuation — so 'Montréal' matches
+    'Montreal' and 'Spa-Francorchamps' matches 'Spa'."""
+    import unicodedata
+    text = unicodedata.normalize("NFKD", str(text))
+    text = "".join(ch for ch in text if not unicodedata.combining(ch))
+    return "".join(ch if ch.isalnum() else " " for ch in text.lower()).split().__str__()
+
+
+def resolve_fastf1_event(circuit_id: str, year: int):
+    """
+    Finds the FastF1 event for one of our circuit ids by matching against the
+    season schedule EXPLICITLY, instead of handing our internal snake_case id
+    to FastF1's fuzzy event lookup.
+
+    That fuzzy lookup silently picks a wrong event when our id doesn't
+    resemble any real event name, and it does so with only a warning — which
+    is how 'great_britain' once produced a whole season's worth of Austrian
+    Grand Prix telemetry saved under great_britain_race.csv. Other ids with
+    the same failure mode: 'usa' -> Qatar, 'saudi_arabia' -> Abu Dhabi, and
+    'spain' -> the Spanish GP at MADRID rather than Barcelona (the 2026
+    calendar reassigned that name — see data/Context/PROJECT_CONTEXT.md).
+
+    Matching order, most specific first: the circuit's city (FastF1's
+    Location column), then its circuits.json name against EventName.
+
+    Returns the matched schedule row. Raises ValueError if nothing matches
+    confidently, so a bad export fails loudly instead of writing a
+    plausible-looking CSV full of another circuit's data.
+    """
+    import fastf1
+
+    circuits = _load_circuits_json().get("circuits", {})
+    circuit = circuits.get(resolve_circuit_id(circuit_id))
+    if circuit is None:
+        raise ValueError(f"'{circuit_id}' is not a circuit in circuits.json")
+
+    schedule = fastf1.get_event_schedule(year)
+    schedule = schedule[schedule["RoundNumber"] > 0]  # drop pre-season testing
+
+    city_tokens = set(_normalize(circuit.get("city", "")).strip("[]").split(", "))
+    name_tokens = set(_normalize(circuit.get("name", "")).strip("[]").split(", "))
+
+    for _, row in schedule.iterrows():
+        loc_tokens = set(_normalize(row["Location"]).strip("[]").split(", "))
+        if city_tokens & loc_tokens:
+            return row
+
+    for _, row in schedule.iterrows():
+        event_tokens = set(_normalize(row["EventName"]).strip("[]").split(", "))
+        # Ignore the words every event shares, or everything matches everything.
+        distinctive = (name_tokens & event_tokens) - {"'grand'", "'prix'", "grand", "prix"}
+        if distinctive:
+            return row
+
+    raise ValueError(
+        f"No {year} event matches circuit '{circuit_id}' "
+        f"(city={circuit.get('city')!r}, name={circuit.get('name')!r}). "
+        f"Refusing to guess — check circuits.json against the real calendar."
+    )
+
+
 def _raw_cache_path(circuit_id: str, session: str) -> str:
     """Path for exactly this circuit_id string — no alias resolution."""
     return os.path.join(TELEMETRY_DIR, f"{circuit_id}_{normalize_session(session)}.csv")
@@ -231,7 +293,16 @@ def load_from_fastf1(circuit_id: str, session: str, year: int = 2026,
         os.makedirs(os.path.join(DATA_DIR, "fastf1_cache"), exist_ok=True)
         fastf1.Cache.enable_cache(os.path.join(DATA_DIR, "fastf1_cache"))
 
-        ses = fastf1.get_session(year, circuit_id, session_code)
+        # Resolve via the season schedule and fetch BY ROUND NUMBER, rather
+        # than handing a name to FastF1's fuzzy lookup — see
+        # resolve_fastf1_event for why that matters (it silently returned
+        # Austrian GP data for 'great_britain' once).
+        event = resolve_fastf1_event(circuit_id, year)
+        log.info(
+            f"'{circuit_id}' -> {year} round {int(event['RoundNumber'])}: "
+            f"{event['EventName']} ({event['Location']})"
+        )
+        ses = fastf1.get_session(year, int(event["RoundNumber"]), session_code)
         ses.load(telemetry=True, laps=True, weather=False)
 
         driver_laps = ses.laps.pick_drivers(driver)
@@ -274,9 +345,10 @@ def load_telemetry(circuit_id: str, session: str = "race",
     Args:
         circuit_id:   our internal id, e.g. "miami".
         session:      "race", "qualifying" or "practice".
-        circuit_name: proper circuit name for FastF1 lookup, e.g.
-                      "Miami International Autodrome". Only used if falling
-                      back to FastF1.
+        circuit_name: deprecated/ignored — FastF1 lookup now resolves the
+                      event from circuits.json via the season schedule (see
+                      resolve_fastf1_event). Kept so existing callers don't
+                      break.
         allow_fastf1: if False (the default) this never touches the network.
                       Keep it False on the deployed server; pass True only
                       when generating cache files locally.
@@ -291,7 +363,9 @@ def load_telemetry(circuit_id: str, session: str = "race",
     if not allow_fastf1:
         return None
 
-    return load_from_fastf1(circuit_name or circuit_id, session)
+    # circuit_id (not circuit_name) — load_from_fastf1 resolves the event
+    # from circuits.json via the season schedule now, so it needs our id.
+    return load_from_fastf1(circuit_id, session)
 
 
 # ── Race-proxy fallback (future/unraced events) ─────────────────────────────
@@ -347,7 +421,7 @@ def export_telemetry_csv(circuit_id: str, session: str = "race",
     Downloads telemetry via FastF1 and writes it to the cache directory so it
     can be committed. Run this locally, never on the server.
     """
-    df = load_from_fastf1(circuit_name or circuit_id, session, year, driver, lap_number)
+    df = load_from_fastf1(circuit_id, session, year, driver, lap_number)
     if df is None:
         return False
 
