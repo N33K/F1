@@ -154,7 +154,8 @@ def fetch_and_parse(circuit_id: str, data_dir: str, overrides_path: str) -> bool
     """
     # Import parser here to avoid circular imports
     # (parser.py also imports from this module in some setups)
-    from parser import extract_text_from_pdf, parse_energy_table, save_result
+    from parser import (extract_text_from_pdf, parse_energy_table,
+                        parse_sector_tables, save_result)
 
     circuits_path   = os.path.join(data_dir, "circuits.json")
     fia_event_names = load_fia_event_names(circuits_path)
@@ -177,12 +178,16 @@ def fetch_and_parse(circuit_id: str, data_dir: str, overrides_path: str) -> bool
     if not success:
         return False
 
-    # Step 4 — parse
+    # Step 4 — parse. The MJ/power-reduction figures come from the PDF text;
+    # the per-circuit sector tables and Overtake lines need pdfplumber's
+    # table extraction (their columns interleave in plain text).
     text   = extract_text_from_pdf(pdf_path)
     result = parse_energy_table(text, circuit_id, pdf_url)
 
     if not result:
         return False
+
+    result.update(parse_sector_tables(pdf_path))
 
     # Step 5 — save
     save_result(result, overrides_path)
