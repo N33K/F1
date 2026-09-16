@@ -43,7 +43,20 @@ def load_overrides() -> dict:
 
 
 
-def get_recharge_limit_mj(circuit_id: str, session: str) -> float | None:
+def get_recharge_limit_mj(circuit_id: str, session: str,
+                          overtake_active: bool = False) -> float | None:
+    """
+    This event's per-lap recharge limit (Article C5.2.10), in MJ.
+
+    Qualifying has a single published figure — the +0.5MJ Overtake allowance
+    (C5.2.10.iii) is a TTCS-only provision, so the FIA's table only splits
+    overtake-active/inactive in the Race column.
+
+    For a race, overtake_active selects between those two columns. It
+    defaults to the inactive figure: that's the baseline a car runs to in
+    clean air, and Overtake in a race is proximity-gated (Article B7.2.3) on
+    multi-car data this project doesn't have.
+    """
     overrides = load_overrides()
 
     for event in overrides.get("events", []):
@@ -55,12 +68,43 @@ def get_recharge_limit_mj(circuit_id: str, session: str) -> float | None:
         if session == "qualifying":
             return limits.get("qualifying")
 
-        # For race pace, use the overtake-inactive figure — that's the
-        # baseline limit a car runs to for most of a lap. The overtake-active
-        # value is a situational bonus, not the lap-long budget.
-        return limits.get("race", {}).get("overtake_inactive")
+        race = limits.get("race", {})
+        if overtake_active:
+            # Falls back to the inactive figure if the doc somehow lacks the
+            # overtake column, rather than returning None and silently
+            # dropping to the model's generic default.
+            return race.get("overtake_active", race.get("overtake_inactive"))
+        return race.get("overtake_inactive")
 
     return None
+
+
+def get_sectors(circuit_id: str) -> dict:
+    """
+    This event's published sector tables (Alt-1 zones, >150kW-reduction
+    sectors, power-reduction reset sectors, higher-speed-threshold sectors),
+    parsed from its FIA Power Unit Information doc by parser.py. Empty for a
+    circuit whose doc hasn't been fetched yet — the model then simply has no
+    reset points, which is also how several real circuits are published.
+    """
+    for event in load_overrides().get("events", []):
+        if event.get("event") == circuit_id:
+            return event.get("sectors", {})
+    return {}
+
+
+def get_power_reduction(circuit_id: str) -> dict:
+    """
+    This event's Article C5.12.8 figures (Power Limited Distance and the
+    published power-reduction rate), parsed from its FIA Power Unit
+    Information doc by parser.py. Returns an empty dict for a circuit whose
+    doc hasn't been fetched/parsed yet — energy_model then falls back to its
+    own default ramp-down rate rather than failing.
+    """
+    for event in load_overrides().get("events", []):
+        if event.get("event") == circuit_id:
+            return event.get("power_reduction", {})
+    return {}
 
 
 def merge_circuit_data() -> list:
@@ -285,6 +329,9 @@ def simulate_circuit(circuit_id: str):
         session      race | qualifying           (default: race)
         elevation    metres                      (default: 0)
         temp         air temperature in Celsius  (default: 25)
+        overtake     1 | true — force Overtake Override Mode on for a race
+                     (default: off). Qualifying ignores this: Article B7.2.2
+                     enables Overtake for that whole session regardless.
 
     Example: GET /api/simulate/miami?session=race&elevation=2&temp=29
 
@@ -357,7 +404,15 @@ def simulate_circuit(circuit_id: str):
             ),
         }), 503
 
-    recharge_limit_mj = get_recharge_limit_mj(circuit_id, session)
+    # Qualifying is always Overtake-enabled (B7.2.2), so the query param only
+    # means anything for a race — where it forces the attacking case on for
+    # the whole lap, since real activation windows need multi-car data.
+    overtake_active   = request.args.get("overtake", "").lower() in ("1", "true", "yes")
+    if scenario == "qualifying":
+        overtake_active = True
+
+    recharge_limit_mj = get_recharge_limit_mj(circuit_id, session, overtake_active)
+    power_reduction   = get_power_reduction(circuit_id)
 
     try:
         result = run_lap_simulation(
@@ -365,6 +420,10 @@ def simulate_circuit(circuit_id: str):
             recharge_limit_mj = recharge_limit_mj,
             elevation_m       = elevation_m,
             air_temp_c        = air_temp_c,
+            rate_limit_kw_per_s      = power_reduction.get("rate_limit_kw_per_s"),
+            power_limited_distance_m = power_reduction.get("power_limited_distance_m"),
+            overtake_active          = overtake_active,
+            sectors                  = get_sectors(circuit_id),
         )
     except ValueError as e:
         # Bad data rather than a crash — surface the model's own message.

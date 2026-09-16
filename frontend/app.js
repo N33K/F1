@@ -191,18 +191,14 @@ function buildSimSections(data) {
     } else {
       // coastD1 marks where the telemetry-measured coast portion
       // (_measure_coast_length in energy_model.py) ends and the drive
-      // phase begins. The drive phase itself is deploy-then-superclip
-      // (mutually exclusive, switching once SOC hits 20% — see
-      // SUPERCLIP_TRIGGER_SOC_FRACTION in energy_model.py), tracked here as
-      // one combined "restored" figure rather than split further; the exact
-      // switch point is visible on the fine per-step SOC/speed graphs
-      // instead (see buildSimTrace).
+      // phase begins.
       const coastLen = Math.min(Math.max(seg.coast_length_m || 0, 0), length);
-      // Where this straight's deploy phase actually ends and superclip
-      // regen (if triggered — see SUPERCLIP_TRIGGER_SOC_FRACTION in
-      // energy_model.py) takes over for the rest of the straight. Clamped
+      // Where this straight's deploy phase actually ends (decay curve
+      // bottoming out, SOC running dry, or the lap's deployment budget
+      // running out — see active_deploy_m in energy_model.py) and the car
+      // starts coasting on ICE alone for the rest of the straight. Clamped
       // to [coastLen, length] defensively; equals `length` on a straight
-      // where superclip never triggers.
+      // where deployment runs the whole way.
       const activeDeployLen = Math.min(Math.max(seg.active_deploy_m ?? length, coastLen), length);
 
       sections.push({
@@ -212,7 +208,7 @@ function buildSimSections(data) {
         coastD1: cursor + coastLen,
         activeDeployD1: cursor + activeDeployLen,
         soc0Mj, soc1Mj,
-        restoredMj: ((seg.E_coast_regen_j ?? 0) + (seg.E_superclip_regen_j ?? 0)) / 1_000_000,
+        restoredMj: (seg.E_coast_regen_j ?? 0) / 1_000_000,
         dischargedMj: (seg.E_deployed_j ?? 0) / 1_000_000,
       });
     }
@@ -368,16 +364,16 @@ function signColor(deltaMj) {
 //   - corner  -> liftoff corners are always "liftcoast"; braking corners
 //     (or corners with no real braking/lift detected) are coloured by the
 //     sign of their actual SOC delta.
-//   - straight -> up to three runs, split at the real physical boundaries
-//     (deploy and superclip are mutually exclusive on one motor — see
-//     SUPERCLIP_TRIGGER_SOC_FRACTION in energy_model.py — so unlike a
-//     corner's regen there's no ambiguity to resolve by net sign here):
+//   - straight -> up to three runs, split at the real physical boundaries:
 //       1. "liftcoast" for the coast portion (d0 to coastD1).
 //       2. "discharge" for the deploy phase (coastD1 to activeDeployD1) —
-//          always a pure drain while it's running, never mixed with regen.
-//       3. "charge" for the superclip phase (activeDeployD1 to d1), only
-//          present on straights where SOC actually dropped enough to
-//          trigger it — zero-length (and skipped) otherwise.
+//          always a pure drain while it's running.
+//       3. "liftcoast" again for the tail (activeDeployD1 to d1), on
+//          straights where deployment ends before the straight does (decay
+//          curve bottoming out, SOC running dry, or the lap deployment
+//          budget running out) — the car coasts on ICE alone with no motor
+//          activity, the same real state as a lift-and-coast phase, so it
+//          shares that colour rather than a fictitious "recharging" one.
 function buildTimelineRuns(sim) {
   const runs = [];
 
@@ -399,9 +395,9 @@ function buildTimelineRuns(sim) {
     if (deployLen > 0.5) {
       runs.push({ lengthM: deployLen, colorClass: 'discharge' });
     }
-    const superclipLen = sec.d1 - activeDeployD1;
-    if (superclipLen > 0.5) {
-      runs.push({ lengthM: superclipLen, colorClass: 'charge' });
+    const coastTailLen = sec.d1 - activeDeployD1;
+    if (coastTailLen > 0.5) {
+      runs.push({ lengthM: coastTailLen, colorClass: 'liftcoast' });
     }
   });
 
@@ -616,7 +612,7 @@ async function loadTrackMap(c) {
 
     // Set a viewBox from the original width/height BEFORE dropping them —
     // stripping width/height without a viewBox already in place is what
-    // caused the old SVG clipping bug (see PROJECT_CONTEXT.md). Doing it
+    // caused the old SVG clipping bug (see data/Context/PROJECT_CONTEXT.md). Doing it
     // in this order keeps the coordinate space intact while still letting
     // CSS scale the element responsively.
     if (!svgEl.hasAttribute('viewBox')) {
@@ -689,9 +685,9 @@ function tracePointAt(sim, distanceM) {
 // yet (see buildTimelineRuns above, kept for later use) — this is a plain
 // single-coloured line. Built from the fine per-step trace (see
 // buildSimTrace/tracePointAt), not the coarse per-section endpoints, so the
-// real deploy-then-superclip V-shape within a straight (drain to the 20%
-// SOC trigger, then partial recovery) is actually visible, not flattened
-// into one straight line across the whole segment.
+// real drain-then-flatten shape within a straight (deployment draining SOC,
+// then flattening out once decay/SOC/lap-budget ends it) is actually
+// visible, not flattened into one straight line across the whole segment.
 const SOC_GRAPH_W   = 1000;
 const SOC_GRAPH_H   = 120;
 const SOC_GRAPH_PAD = 10;
@@ -710,7 +706,7 @@ function renderSocGraph() {
   }
   nodata.style.display = 'none';
 
-  const maxMj      = sim.meta.battery_cap_mj || 4;
+  const maxMj      = sim.meta.soc_swing_limit_mj || 4;
   const lapLengthM = sim.lapLengthM || sim.trace[sim.trace.length - 1].d;
   const toX = d   => (d / lapLengthM) * SOC_GRAPH_W;
   const toY = soc => valueToY(soc, maxMj, SOC_GRAPH_H, SOC_GRAPH_PAD);
@@ -767,7 +763,7 @@ function initSocGraphHover() {
     const sim = state.simulation;
     if (!sim || !sim.trace || !sim.trace.length) return;
 
-    const maxMj      = sim.meta.battery_cap_mj || 4;
+    const maxMj      = sim.meta.soc_swing_limit_mj || 4;
     const lapLengthM = sim.lapLengthM || sim.trace[sim.trace.length - 1].d;
 
     const rect      = svg.getBoundingClientRect();
