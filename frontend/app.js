@@ -692,6 +692,39 @@ const SOC_GRAPH_W   = 1000;
 const SOC_GRAPH_H   = 120;
 const SOC_GRAPH_PAD = 10;
 
+// Same HTML-over-SVG approach as renderPowerAxisLabels, and for the same
+// reason — this graph is preserveAspectRatio="none" too. Its viewBox height
+// (120) matches .soc-graph-wrap--secondary's CSS height, so SVG y is a pixel
+// offset in the wrap 1:1.
+function renderSocAxisLabels(startMj, maxMj, toY) {
+  const wrap = document.getElementById('soc-graph-wrap');
+  if (!wrap) return;
+
+  wrap.querySelectorAll('.soc-axis-label').forEach(el => el.remove());
+
+  const labels = [{
+    y: toY(maxMj),
+    cls: 'ceiling',
+    text: `${maxMj} MJ · most the charge may swing`,
+  }];
+
+  if (typeof startMj === 'number' && startMj > 0 && startMj < maxMj) {
+    labels.push({
+      y: toY(startMj),
+      cls: 'start',
+      text: `${startMj.toFixed(1)} MJ · charge at the start of the lap`,
+    });
+  }
+
+  labels.forEach(l => {
+    const el = document.createElement('div');
+    el.className = `soc-axis-label ${l.cls}`;
+    el.style.top = `${l.y}px`;
+    el.textContent = l.text;
+    wrap.appendChild(el);
+  });
+}
+
 function renderSocGraph() {
   const svg    = document.getElementById('soc-graph');
   const nodata = document.getElementById('soc-graph-nodata');
@@ -701,6 +734,10 @@ function renderSocGraph() {
 
   const sim = state.simulation;
   if (!sim || !sim.trace || !sim.trace.length) {
+    // Same reasoning as the speed/power graph: these labels live in the wrap,
+    // not the SVG, so clear them explicitly on a circuit with no data.
+    const wrap = document.getElementById('soc-graph-wrap');
+    if (wrap) wrap.querySelectorAll('.soc-axis-label').forEach(el => el.remove());
     nodata.style.display = 'flex';
     return;
   }
@@ -723,6 +760,22 @@ function renderSocGraph() {
     line.setAttribute('y2', toY(mj));
     svg.appendChild(line);
   });
+
+  // Reference line at the charge the lap started on. In race pace the model
+  // targets a lap that ends where it began, so this doubles as the "back to
+  // where we started" marker — without it the trace is an unscaled wiggle.
+  const startMj = sim.meta.soc_start_mj;
+  if (typeof startMj === 'number' && startMj > 0 && startMj < maxMj) {
+    const startLine = document.createElementNS(ns, 'line');
+    startLine.setAttribute('class', 'soc-graph-start');
+    startLine.setAttribute('x1', 0);
+    startLine.setAttribute('x2', SOC_GRAPH_W);
+    startLine.setAttribute('y1', toY(startMj));
+    startLine.setAttribute('y2', toY(startMj));
+    svg.appendChild(startLine);
+  }
+
+  renderSocAxisLabels(startMj, maxMj, toY);
 
   const linePoints = sim.trace.map(p => `${toX(p.d)},${toY(p.socMj)}`).join(' ');
   const fillPoints = `${toX(sim.trace[0].d)},${toY(0)} ${linePoints} ${toX(sim.trace[sim.trace.length - 1].d)},${toY(0)}`;
@@ -818,6 +871,41 @@ const POWER_GRAPH_H        = 240;
 const POWER_GRAPH_PAD      = 10;
 const POWER_GRAPH_MAX_KW   = 350;  // the FIA's own deployment ceiling — fixed, not autoscaled, so the filled area's height means the same thing on every circuit
 
+// Y-axis reference labels for the power scale, drawn as HTML rather than SVG
+// <text>. The graph carries preserveAspectRatio="none", so its 1000-unit
+// viewBox width is squashed to whatever the panel is actually wide and any
+// text inside it would be horizontally distorted. The viewBox height (240)
+// matches .speed-power-graph-wrap's CSS height exactly, so an SVG y
+// coordinate is a pixel offset in the wrap 1:1.
+function renderPowerAxisLabels(floorKw, showFloor, toYPower) {
+  const wrap = document.getElementById('speed-power-graph-wrap');
+  if (!wrap) return;
+
+  wrap.querySelectorAll('.power-axis-label').forEach(el => el.remove());
+
+  const labels = [{
+    y: toYPower(POWER_GRAPH_MAX_KW),
+    cls: 'ceiling',
+    text: `${POWER_GRAPH_MAX_KW} kW · FIA maximum`,
+  }];
+
+  if (showFloor) {
+    labels.push({
+      y: toYPower(floorKw),
+      cls: 'floor',
+      text: `${Math.round(floorKw)} kW · what this lap can sustain`,
+    });
+  }
+
+  labels.forEach(l => {
+    const el = document.createElement('div');
+    el.className = `power-axis-label ${l.cls}`;
+    el.style.top = `${l.y}px`;
+    el.textContent = l.text;
+    wrap.appendChild(el);
+  });
+}
+
 function renderSpeedPowerGraph() {
   const svg    = document.getElementById('speed-power-graph');
   const nodata = document.getElementById('speed-power-graph-nodata');
@@ -827,6 +915,11 @@ function renderSpeedPowerGraph() {
 
   const sim = state.simulation;
   if (!sim || !sim.trace || !sim.trace.length) {
+    // Clear any axis labels left over from the previously selected circuit —
+    // they live in the wrap, not the SVG, so emptying the SVG doesn't remove
+    // them and they'd otherwise sit on top of the "no data" message.
+    const wrap = document.getElementById('speed-power-graph-wrap');
+    if (wrap) wrap.querySelectorAll('.power-axis-label').forEach(el => el.remove());
     nodata.style.display = 'flex';
     return;
   }
@@ -868,6 +961,24 @@ function renderSpeedPowerGraph() {
   ceilingLine.setAttribute('y1', toYPower(POWER_GRAPH_MAX_KW));
   ceilingLine.setAttribute('y2', toYPower(POWER_GRAPH_MAX_KW));
   svg.appendChild(ceilingLine);
+
+  // Second reference at the sustained power level the model solved for this
+  // lap (meta.deploy_floor_w). Without it the orange band just sits at some
+  // unexplained height well below the ceiling — this is the line it settles
+  // on, and the whole point of the graph.
+  const floorKw = (sim.meta.deploy_floor_w ?? 0) / 1000;
+  const showFloor = floorKw > 0 && floorKw < POWER_GRAPH_MAX_KW;
+  if (showFloor) {
+    const floorLine = document.createElementNS(ns, 'line');
+    floorLine.setAttribute('class', 'speed-power-graph-floor');
+    floorLine.setAttribute('x1', 0);
+    floorLine.setAttribute('x2', POWER_GRAPH_W);
+    floorLine.setAttribute('y1', toYPower(floorKw));
+    floorLine.setAttribute('y2', toYPower(floorKw));
+    svg.appendChild(floorLine);
+  }
+
+  renderPowerAxisLabels(floorKw, showFloor, toYPower);
 
   const powerLinePoints = sim.trace.map(p => `${toX(p.d)},${toYPower(p.deployKw)}`).join(' ');
   const powerFillPoints = `${toX(sim.trace[0].d)},${toYPower(0)} ${powerLinePoints} ${toX(sim.trace[sim.trace.length - 1].d)},${toYPower(0)}`;
