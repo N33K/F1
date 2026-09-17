@@ -474,6 +474,25 @@ html, body {
 .soc-graph-fill     { fill: var(--teal); opacity: 0.12; }
 .soc-graph-line      { fill: none; stroke: var(--teal); stroke-width: 2; }
 .soc-graph-baseline  { stroke: var(--border2); stroke-width: 1; stroke-dasharray: 4 4; }
+.soc-graph-start     { stroke: var(--teal); stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.5; }
+
+/* Charge-scale reference labels — same HTML-over-SVG approach as
+   .power-axis-label, for the same preserveAspectRatio="none" reason. */
+.soc-axis-label {
+  position: absolute;
+  left: 8px;
+  transform: translateY(-50%);
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.55);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.soc-axis-label.ceiling { color: var(--muted); }
+.soc-axis-label.start   { color: var(--teal); }
 .soc-graph-cursor    { stroke: var(--muted); stroke-width: 1; opacity: 0; }
 .soc-graph-dot       { fill: var(--teal); stroke: var(--bg2); stroke-width: 2; opacity: 0; }
 
@@ -518,6 +537,26 @@ html, body {
 .speed-power-graph-power-line { fill: none; stroke: var(--orange); stroke-width: 1.5; opacity: 0.7; }
 .speed-power-graph-speed-line { fill: none; stroke: var(--teal); stroke-width: 2.5; }
 .speed-power-graph-baseline   { stroke: var(--border2); stroke-width: 1; stroke-dasharray: 4 4; }
+.speed-power-graph-floor      { stroke: var(--orange); stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.55; }
+
+/* Power-scale reference labels. Positioned as HTML over the graph rather
+   than as SVG <text>, because the graph uses preserveAspectRatio="none" and
+   would squash any text drawn inside it. */
+.power-axis-label {
+  position: absolute;
+  left: 8px;
+  transform: translateY(-50%);
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.55);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.power-axis-label.ceiling { color: var(--muted); }
+.power-axis-label.floor   { color: var(--orange); }
 .speed-power-graph-cursor     { stroke: var(--muted); stroke-width: 1; opacity: 0; }
 .speed-power-graph-dot        { fill: var(--teal); stroke: var(--bg2); stroke-width: 2; opacity: 0; }
 

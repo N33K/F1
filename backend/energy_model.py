@@ -311,6 +311,31 @@ def in_sector(distance_m, sectors, lap_length_m, race_only=True):
     return False
 
 
+# How much of a permitted Article C5.12.5 reset a race driver actually takes,
+# as a fraction of the headroom between the lap's sustainable floor and the
+# full 350kW demand.
+#
+# The regulation permits a return to the full 350kW, but taking that at every
+# reset is not affordable: at 1.0 the lap's energy budget cannot balance at
+# all on Spa or Barcelona — the floor solver bottoms out at 0kW and the lap
+# still ends ~1MJ down on where it started. Anything at or below ~0.6
+# balances on all 14 cached circuits.
+#
+# This value CANNOT be calibrated against the FIA's published Power Limited
+# Distance, which is the model's only external check: PLD counts distance
+# where the driver asks for full power and gets less, so any partial restore
+# still counts as limited and the figure doesn't move. Measured directly —
+# mean |modelled - published| is identical (230m) for every fraction from 0.0
+# to 0.6. It is therefore a modelling judgement, not a fitted value.
+#
+# 0.25 is chosen to make the published reset sectors visibly matter without
+# degenerating the rest of the lap: it lifts in-zone power to roughly 2-3x the
+# sustained floor (Australia 64->136kW, Britain 43->120kW, Spain 60->133kW,
+# Spa 36->115kW) while keeping every circuit's baseline above 35kW. At 0.5 the
+# bursts reach ~190kW but Spa's baseline collapses to 13kW.
+RESET_RESTORE_FRACTION = 0.25
+
+
 class PowerReductionState:
     """
     Tracks Article C5.12's power reduction across a lap.
@@ -331,24 +356,23 @@ class PowerReductionState:
     is cleared only by passing through a published C5.12.5 reset sector. Ten
     of the fourteen circuits checked publish no race reset sectors at all, so
     on those the reduction, once applied, stands for the rest of the lap.
+
+    Inside a reset sector power is restored part of the way back toward the
+    full 350kW demand (see RESET_RESTORE_FRACTION) and the ratchet is held
+    open until the car leaves; on the way out the usual C5.12.4 cut and
+    C5.12.6 ramp bring it back down to the floor. Because the floor is solved
+    for the lap as a whole, spending more inside the reset sectors buys a
+    lower floor everywhere else rather than more energy overall — the lap's
+    budget is unchanged either way.
     """
 
     def __init__(self, floor_w, rate_w_per_s, reset_sectors=None,
-                 greater_reduction_sectors=None, lap_length_m=1.0,
-                 manage_energy_after_reset=False):
+                 greater_reduction_sectors=None, lap_length_m=1.0):
         self.floor_w = floor_w
         self.rate_w_per_s = rate_w_per_s
         self.reset_sectors = reset_sectors or []
         self.greater_reduction_sectors = greater_reduction_sectors or []
         self.lap_length_m = lap_length_m
-        # A reset sector PERMITS power to climb back up; it doesn't oblige the
-        # driver to take it. In a race, taking every reset at full power is
-        # not affordable — at Spa it spends 4.09MJ against 2.57MJ recovered,
-        # which empties the battery within a couple of laps — so an
-        # energy-managing driver comes back only to the sustainable level.
-        # In qualifying there is no next lap to save for, so a reset restores
-        # full power.
-        self.manage_energy_after_reset = manage_energy_after_reset
 
         self.reduction_w = 0.0      # how much has been taken off the 350kW demand
         self.hold_remaining_s = 0.0  # C5.12.4's mandatory >=1s hold after a cut
@@ -374,10 +398,10 @@ class PowerReductionState:
         if inside:
             if not self.in_reset_zone:
                 self.reset_count += 1
-            # How far the reset is actually taken — all the way back to full
-            # power in qualifying, only up to the sustainable level in a race
-            # (see manage_energy_after_reset).
-            restore_to = self.floor_w if self.manage_energy_after_reset else P_MGUK_MAX
+            # How much of the permitted reset the driver actually takes —
+            # see RESET_RESTORE_FRACTION.
+            restore_to = self.floor_w + RESET_RESTORE_FRACTION * max(
+                P_MGUK_MAX - self.floor_w, 0.0)
             self.reduction_w = max(P_MGUK_MAX - restore_to, 0.0)
             self.hold_remaining_s = 0.0
         self.in_reset_zone = inside
@@ -492,8 +516,6 @@ SCENARIOS = {
         # One flat-out lap with nothing held back: spend the window down to
         # empty. See solve_deploy_floor_w.
         "target_end_soc_j": 0.0,
-        # Nothing to save for, so a reset sector is taken in full.
-        "manage_energy_after_reset": False,
         "lift_and_coast": False,                    # quali is one flat-out lap — no fuel-saving technique needed
         # Qualifying is a "Lap Time Classified Session" (LTCS), where
         # Article B7.2.2 enables Overtake Override Mode for the ENTIRE
@@ -509,9 +531,6 @@ SCENARIOS = {
         # the driver runs out within a handful of laps. This is what forces
         # the Article C5.12 power reduction. See solve_deploy_floor_w.
         "target_end_soc_j": ES_SOC_SWING_LIMIT_J * 0.5,
-        # A reset permits full power again, but a race driver can't afford to
-        # take it — see PowerReductionState.manage_energy_after_reset.
-        "manage_energy_after_reset": True,
         "lift_and_coast": False,                    # see note below — disabled pending a per-corner model
         # A race is a "Total Time Classified Session" (TTCS), where Overtake
         # is proximity-gated (B7.2.3): it activates at the Activation Line
@@ -884,7 +903,6 @@ def simulate_lap(corners_df, straights_df, mass_kg, soc_start_j,
                   reset_sectors=None,
                   greater_reduction_sectors=None,
                   alt_curve_sectors=None,
-                  manage_energy_after_reset=False,
                   reduction=None,
                   dt=0.05):
     """
@@ -992,7 +1010,6 @@ def simulate_lap(corners_df, straights_df, mass_kg, soc_start_j,
             reset_sectors=reset_sectors,
             greater_reduction_sectors=greater_reduction_sectors,
             lap_length_m=lap_length_m,
-            manage_energy_after_reset=manage_energy_after_reset,
         )
 
     n_segments = len(corners_df)  # straights_df[i] follows corners_df[i], by construction
@@ -1385,7 +1402,6 @@ def run_lap_simulation(telemetry, circuits_data, track_key, scenario_name,
         overtake_active = scenario.get("overtake_active", False)
 
     sectors = sectors or {}
-    manage_after_reset = scenario.get("manage_energy_after_reset", False)
     reset_sectors = sectors.get("power_reduction_reset", [])
     greater_reduction_sectors = sectors.get("greater_reduction", [])
     alt_curve_sectors = sectors.get("alt_power_curve", [])
@@ -1408,7 +1424,6 @@ def run_lap_simulation(telemetry, circuits_data, track_key, scenario_name,
             reset_sectors=reset_sectors,
             greater_reduction_sectors=greater_reduction_sectors,
             alt_curve_sectors=alt_curve_sectors,
-            manage_energy_after_reset=manage_after_reset,
             reduction=state,
         )
 
@@ -1431,7 +1446,6 @@ def run_lap_simulation(telemetry, circuits_data, track_key, scenario_name,
         reset_sectors=reset_sectors,
         greater_reduction_sectors=greater_reduction_sectors,
         lap_length_m=lap_length_m,
-        manage_energy_after_reset=manage_after_reset,
     )
     segment_results = run(deploy_floor_w, state=reduction)
 
