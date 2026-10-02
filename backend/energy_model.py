@@ -567,6 +567,9 @@ def load_circuits(path="circuits.json"):
 def get_aero_coeffs(circuits_data, track_key, mode="corner"):
     """mode: 'corner' or 'straight'"""
     circuit = circuits_data["circuits"][track_key]
+    # An event held at another track (circuits.json "venue") uses that
+    # track's aero level.
+    circuit = circuits_data["circuits"].get(circuit.get("venue"), circuit)
     level = circuit["downforce_level"]
     profile = circuits_data["downforce_level"][level]
 

@@ -155,7 +155,10 @@ def resolve_fastf1_event(circuit_id: str, year: int):
     schedule = fastf1.get_event_schedule(year)
     schedule = schedule[schedule["RoundNumber"] > 0]  # drop pre-season testing
 
-    city_tokens = set(_normalize(circuit.get("city", "")).strip("[]").split(", "))
+    # An event held at another track (circuits.json "venue") is listed by
+    # FastF1 under that track's location, but keeps its own event name.
+    venue = circuits.get(circuit.get("venue"), circuit)
+    city_tokens = set(_normalize(venue.get("city", "")).strip("[]").split(", "))
     name_tokens = set(_normalize(circuit.get("name", "")).strip("[]").split(", "))
 
     for _, row in schedule.iterrows():
