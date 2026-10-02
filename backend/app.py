@@ -107,6 +107,28 @@ def get_power_reduction(circuit_id: str) -> dict:
     return {}
 
 
+# Fields that describe the physical track rather than the event. An event
+# with "venue" set (e.g. 2026's Bahrain GP run at Sepang) takes these from
+# the venue's own circuits.json entry instead of its own.
+VENUE_FIELDS = (
+    "circuit", "city", "country", "lap_time_sec", "race_laps", "energy_type",
+    "svg_file", "svg_direction_reversed", "downforce_level",
+)
+
+
+def resolve_venue(circuits: dict, circuit: dict) -> dict:
+    """Returns the event's entry with its venue's track fields applied."""
+    venue = circuits["circuits"].get(circuit.get("venue"))
+    if venue is None:
+        return circuit
+    resolved = dict(circuit)
+    for field in VENUE_FIELDS:
+        resolved.pop(field, None)
+        if field in venue:
+            resolved[field] = venue[field]
+    return resolved
+
+
 def merge_circuit_data() -> list:
     """
     Merges circuits.json with overrides.json.
@@ -133,6 +155,12 @@ def merge_circuit_data() -> list:
     result = []
 
     for circuit_id, circuit in circuits["circuits"].items():
+        # Tracks kept only as a venue for other events (or for a later
+        # season) aren't on this season's calendar.
+        if circuit.get("inactive"):
+            continue
+        circuit = resolve_venue(circuits, circuit)
+
         entry = {
             "id":           circuit_id,
             "name":         circuit["name"],
@@ -369,6 +397,7 @@ def simulate_circuit(circuit_id: str):
     if circuit is None:
         log.warning(f"Simulation requested for unknown circuit: {circuit_id}")
         abort(404)
+    circuit = resolve_venue(circuits, circuit)
 
     telemetry = load_telemetry(
         circuit_id,
