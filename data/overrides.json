@@ -1102,6 +1102,90 @@
       }
     },
     {
+      "event": "singapore",
+      "source_url": "https://www.fia.com/system/files/decision-document/2026_singapore_grand_prix_-_power_unit_information.pdf",
+      "extracted_at": "2026-10-10T07:05:54.998286",
+      "limits": {
+        "race": {
+          "overtake_inactive": 8.5,
+          "overtake_active": 9.0
+        },
+        "qualifying": 9.0,
+        "free_practice": 9.0,
+        "out_laps": 9.0
+      },
+      "power_reduction": {
+        "power_limited_distance_m": 2185.0,
+        "rate_limit_kw_per_s": 100.0
+      },
+      "sectors": {
+        "alt_power_curve": [
+          {
+            "label": "T1-T5",
+            "start_m": 400.0,
+            "end_m": 900.0,
+            "quali_only": false
+          },
+          {
+            "label": "T7-T9",
+            "start_m": 1750.0,
+            "end_m": 2150.0,
+            "quali_only": false
+          },
+          {
+            "label": "T10-T13",
+            "start_m": 2600.0,
+            "end_m": 3000.0,
+            "quali_only": false
+          }
+        ],
+        "greater_reduction": [
+          {
+            "label": "T1-T3",
+            "start_m": 400.0,
+            "end_m": 550.0,
+            "quali_only": false,
+            "max_reduction_kw": 350.0
+          },
+          {
+            "label": "T7-T9",
+            "start_m": 1750.0,
+            "end_m": 2150.0,
+            "quali_only": false,
+            "max_reduction_kw": 350.0
+          },
+          {
+            "label": "T10-T13",
+            "start_m": 2600.0,
+            "end_m": 2950.0,
+            "quali_only": false,
+            "max_reduction_kw": 350.0
+          },
+          {
+            "label": "Exit T17",
+            "start_m": 4300.0,
+            "end_m": 4750.0,
+            "quali_only": true,
+            "max_reduction_kw": 350.0
+          }
+        ],
+        "power_reduction_reset": [
+          {
+            "label": "Exit T18",
+            "start_m": 4700.0,
+            "end_m": 4900.0,
+            "quali_only": true
+          }
+        ],
+        "higher_speed_threshold": []
+      },
+      "overtake": {
+        "detection_gap_s": 1.0,
+        "detection_line_m": 4350.0,
+        "activation_line_m": 4430.0
+      }
+    },
+    {
       "event": "spain",
       "source_url": "https://www.fia.com/system/files/decision-document/2026_barcelona-catalunya_grand_prix_-_power_unit_information.pdf",
       "extracted_at": "2026-07-29T22:51:52.722378",
